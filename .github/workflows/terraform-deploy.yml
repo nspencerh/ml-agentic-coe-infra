@@ -4,62 +4,90 @@ on:
   push:
     branches: [main]
     paths:
-      - 'modules/**'
-      - 'component/gemini/**'
+      - 'component/**'
       - 'variables/**'
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to deploy (leave empty for auto-detect)"
+        required: true 
+        type: choice
+        options:
+          - gemini
+          - monitoring
 
 permissions:
   contents: read
   id-token: write
 
-env:
-  TF_VERSION: "1.9.8"
-  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
-  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-
 jobs:
-  dev:
+  detect:
     runs-on: ubuntu-latest
-    environment: dev
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     outputs:
-      deployment_id: ${{ github.run_id }}
+      components: ${{ steps.resolve.outputs.components }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          fetch-depth: 0
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3.1.2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        working-directory: component/gemini/src
+      - name: Detect changed components
+        id: resolve
         run: |
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=gemini/dev"
+          if [[ -n "${{ inputs.component }}" ]]; then
+            echo "components=[\"${{ inputs.component }}\"]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Terraform Apply
-        working-directory: component/gemini/src
-        run: |
-          terraform apply -auto-approve \
-            -var-file="../../../variables/default.tfvars" \
-            -var-file="../dev.tfvars"
+          CHANGED_FILES=$(git diff --name-only origin/main HEAD)
 
-  staging:
-    needs: dev
+          # Extract component names from component/{name}/ paths
+          COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
+
+          # variables/ changes affect all components
+          if echo "${CHANGED_FILES}" | grep -qE '^variables/'; then
+            COMPONENT_NAMES=$(find component -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+          fi
+
+          # Module changes are versioned via git tags - they don't trigger component deploys.
+          # Bump the module source ref in the component to pick up module changes.
+
+          if [[ -z "${COMPONENT_NAMES}" ]]; then
+            echo "components=[]" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(echo "${COMPONENT_NAMES}" | jq -R . | jq -s -c .)
+            echo "components=${JSON}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --- Preprod ---
+  preprod-plan:
+    needs: [detect]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod
+      tfvars_file: preprod.tfvars
+    secrets: inherit
+
+  preprod-apply:
+    needs: [detect]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod
+      plan_gcs_path: ${{ needs.preprod-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  preprod-eval:
+    needs: [detect, preprod-apply]
     runs-on: ubuntu-latest
-    environment: staging
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    environment: preprod
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -67,93 +95,43 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3.1.2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Log commenced
-        run: echo "::notice::Deployment ${{ github.run_id }} commenced for staging"
-
-      - name: Terraform Init
-        working-directory: component/gemini/src
+      - name: Run preprod evaluation
         run: |
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=gemini/staging"
+          echo "Running preprod evaluation"
+          # agents-cli eval --environment preprod
 
-      - name: Terraform Apply
-        working-directory: component/gemini/src
-        run: |
-          terraform apply -auto-approve \
-            -var-file="../../../variables/default.tfvars" \
-            -var-file="../staging.tfvars"
+  # --- Production ---
+  prod-plan:
+    needs: [detect, preprod-eval]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: production
+      tfvars_file: production.tfvars
+    secrets: inherit
 
-  staging-eval:
-    needs: staging
-    runs-on: ubuntu-latest
-    environment: staging
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2.1.8
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
-
-      - name: Run eval
-        run: |
-          echo "Running staging evaluation"
-          # agents-cli eval --environment staging
-
-  production:
-    needs: staging-eval
-    runs-on: ubuntu-latest
-    environment: production
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4.2.2
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2.1.8
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3.1.2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform Init
-        working-directory: component/gemini/src
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=gemini/production"
-
-      - name: Terraform Apply
-        working-directory: component/gemini/src
-        run: |
-          terraform apply -auto-approve \
-            -var-file="../../../variables/default.tfvars" \
-            -var-file="../production.tfvars"
+  prod-apply:
+    needs: [detect, prod-plan]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: production
+      plan_gcs_path: ${{ needs.prod-plan.outputs.plan_gcs_path }}
+    secrets: inherit
 
   post-prod-eval:
-    needs: production
+    needs: prod-apply
     runs-on: ubuntu-latest
     environment: production
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     outputs:
       eval_passed: ${{ steps.eval.outputs.passed }}
     steps:
@@ -163,8 +141,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Run post-production eval
         id: eval
@@ -179,8 +157,6 @@ jobs:
     if: needs.post-prod-eval.outputs.eval_passed == 'false'
     runs-on: ubuntu-latest
     environment: production
-    env:
-      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -188,11 +164,10 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Query last succeeded deployment
-        id: query
         run: |
           echo "Querying BigQuery for last succeeded deployment"
           # bq-log-deployment.py query-last-success --component gemini --environment production
