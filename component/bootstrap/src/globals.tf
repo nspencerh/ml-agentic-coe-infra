@@ -1,1 +1,0 @@
-../../../variables/globals.tf
