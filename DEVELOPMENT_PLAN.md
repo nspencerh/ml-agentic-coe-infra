@@ -10,9 +10,8 @@ This repo provisions Gemini Enterprise (Discovery Engine) apps and Vertex AI Age
 
 - FR-001: A `modules/discovery-engine/` module creates a single `google_discovery_engine_chat_engine` resource and exposes its ID and full resource name as outputs.
 - FR-002: A `modules/reasoning-engines/` module accepts a map of reasoning engine configs, creates all `google_vertex_ai_reasoning_engine` resources, and writes a JSON blob to GCS at a standard path keyed by component and environment.
-- FR-003: A `modules/agent-registration/` module registers Reasoning Engines as assistants on a Discovery Engine app via `google_discovery_engine_assistant` (google-beta provider, as this resource is not yet in GA).
-- FR-004: The `component/gemini/` component calls all three modules, supports one Discovery Engine app and multiple Reasoning Engines per environment, and exposes outputs for CI/CD consumption.
-- FR-005: A `component/monitoring/` component provisions BigQuery tables `deployment_events` and `eval_runs`, plus a `deployment_events_latest` view. It deploys to the staging GCP project initially.
+- FR-003: The `component/gemini/` component calls both modules, supports one Discovery Engine app and multiple Reasoning Engines per environment, and exposes outputs for CI/CD consumption.
+- FR-004: A `component/monitoring/` component provisions BigQuery tables `deployment_events` and `eval_runs`, plus a `deployment_events_latest` view. It deploys to the staging GCP project initially.
 - FR-005: The foundations repo has four GHA workflows: `terraform-plan.yml` (PR plan), `terraform-pr-environment.yml` (ephemeral PR env apply/destroy), `terraform-deploy.yml` (promotion pipeline), and `evaluate-scheduled.yml` (weekly production eval).
 - FR-006: `terraform-deploy.yml` deploys sequentially: dev (auto) -> staging (engineer approval gate) -> staging eval -> production (admin approval gate) -> post-prod eval. Failed apply or eval writes a `failed` event row and does not proceed.
 - FR-007: `terraform-deploy.yml` triggers a rollback on post-production eval failure by querying BigQuery for the last `succeeded` deployment event and redeploying using the stored `package_uri` or `container_image` from that event.
@@ -49,7 +48,6 @@ gemini-enterprise-foundations (this repo)
   modules/
     discovery-engine/       <- one DE chat app
     reasoning-engines/      <- N reasoning engine shells + GCS outputs blob
-    agent-registration/     <- links reasoning engines to DE app as assistants
   component/
     gemini/                 <- one DE app + N reasoning engines per env
     monitoring/             <- BigQuery deployment_events, eval_runs tables
