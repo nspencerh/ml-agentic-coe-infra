@@ -1,0 +1,24 @@
+{
+    "mcpServers": {
+        "atlassian-rovo-mcp-server": {
+            "url": "https://mcp.atlassian.com/v1/mcp"
+        },
+        "awslabs.billing-cost-management-mcp-server": {
+            "command": "uvx",
+            "args": [
+                "awslabs.billing-cost-management-mcp-server@latest"
+            ],
+            "env": {
+                "FASTMCP_LOG_LEVEL": "ERROR",
+                "AWS_PROFILE": "root-read",
+                "AWS_REGION": "us-east-1"
+            }
+        },
+        "github": {
+            "httpUrl": "https://api.githubcopilot.com/mcp/",
+            "headers": {
+                "Authorization": "Bearer $GITHUB_MCP_PAT"
+            }
+        }
+    }
+}

@@ -1,0 +1,33 @@
+name: Trigger Issue Created → Jira Card Create
+
+permissions:
+  contents: read
+  issues: read
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: GitHub Issue number to link back to
+        required: true
+      issue_title:
+        description: Title to use in Jira
+        required: true
+      issue_body:
+        description: Body/description to use in Jira
+        required: false
+
+jobs:
+  call-issue-created:
+    uses: transurban/github-action-templates/.github/workflows/create-jira-card-on-issue-creation.yml@21a603695cf17a1867d846a361a81631373f6c56
+    with:
+      issue_title: ${{ github.event.issue.title || inputs.issue_title }}
+      issue_body: ${{ github.event.issue.body || inputs.issue_body }}
+      issue_number: ${{ github.event.issue.number  || inputs.issue_number }}
+    secrets:
+      JIRA_USER: ${{ secrets.ATLASSIAN_JIRA_GITHUB_ACTION_USER_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_JIRA_GITHUB_ACTION_API_TOKEN }}
+      JIRA_BASE_URL: ${{ secrets.ATLASSIAN_JIRA_BASE_URL }}
+      passed_github_token: ${{ secrets.PAT_GITHUB_TOKEN }}

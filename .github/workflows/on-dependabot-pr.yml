@@ -1,0 +1,37 @@
+name: Dependabot PR → Jira Card
+#Author: Thomas Hyland
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  pull_request:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      pr_user_login:
+        description: Simulated PR author login for testing
+        required: true
+        type: string
+      pr_title:
+        description: Title of the Dependabot PR
+        required: true
+        type: string
+      pr_body:
+        description: Body/description of the Dependabot PR
+        required: false
+        type: string
+
+jobs:
+  call-dependabot-pr:
+    uses: transurban/github-action-templates/.github/workflows/create-jira-card-on-dependabot-pr.yml@21a603695cf17a1867d846a361a81631373f6c56
+    with:
+      pr_user_login: ${{ inputs.pr_user_login || (github.event_name == 'pull_request' && github.event.pull_request.user.login) }}
+      pr_title: ${{ inputs.pr_title || (github.event_name == 'pull_request' && github.event.pull_request.title) }}
+      pr_body: ${{ inputs.pr_body || (github.event_name == 'pull_request' && github.event.pull_request.body) || '' }}
+    secrets:
+      JIRA_USER: ${{ secrets.ATLASSIAN_JIRA_GITHUB_ACTION_USER_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.ATLASSIAN_JIRA_GITHUB_ACTION_API_TOKEN }}
+      JIRA_BASE_URL: ${{ secrets.ATLASSIAN_JIRA_BASE_URL }}
+      passed_github_token: ${{ secrets.PAT_GITHUB_TOKEN }}

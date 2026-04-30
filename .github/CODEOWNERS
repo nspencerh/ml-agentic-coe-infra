@@ -1,0 +1,6 @@
+# Codeowners will be requested for review when someone opens a PR
+
+# For more details: https://help.github.com/articles/about-codeowners/
+
+# Global rule (owners for everything in the repo):
+*       @transurban/mlops
