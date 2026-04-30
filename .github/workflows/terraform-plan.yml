@@ -1,0 +1,84 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'modules/**'
+      - 'component/**'
+      - 'variables/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [gemini, monitoring]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/${{ matrix.component }}/src
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: component/${{ matrix.component }}/src
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: component/${{ matrix.component }}/src
+        run: |
+          terraform plan -no-color \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../dev.tfvars" \
+            -out=tfplan 2>&1 | tee plan_output.txt
+        continue-on-error: true
+
+      - name: Comment Plan on PR
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync(
+              'component/${{ matrix.component }}/src/plan_output.txt', 'utf8'
+            );
+            const truncated = output.length > 60000
+              ? output.substring(0, 60000) + '\n\n... (truncated)'
+              : output;
+            const body = `### Terraform Plan: \`${{ matrix.component }}\`
+            \`\`\`
+            ${truncated}
+            \`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

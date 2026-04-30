@@ -1,0 +1,87 @@
+name: PR Environment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, closed]
+    paths:
+      - 'modules/**'
+      - 'component/gemini/**'
+      - 'variables/**'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  apply:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/gemini/src
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=gemini/pr-${{ github.event.number }}"
+
+      - name: Terraform Apply
+        working-directory: component/gemini/src
+        run: |
+          terraform apply -auto-approve \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../dev.tfvars" \
+            -var="environment=pr-${{ github.event.number }}"
+
+  destroy:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/gemini/src
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=gemini/pr-${{ github.event.number }}"
+
+      - name: Terraform Destroy
+        working-directory: component/gemini/src
+        run: |
+          terraform destroy -auto-approve \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../dev.tfvars" \
+            -var="environment=pr-${{ github.event.number }}"

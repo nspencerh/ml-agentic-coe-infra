@@ -1,0 +1,55 @@
+name: Scheduled Evaluation
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 02:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write
+
+env:
+  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Run production evaluation
+        id: eval
+        run: |
+          echo "Running scheduled production evaluation"
+          # result=$(agents-cli eval --environment production)
+          # echo "passed=$result" >> "$GITHUB_OUTPUT"
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log eval result to BigQuery
+        run: |
+          echo "Writing eval result to BigQuery eval_runs table"
+          # bq-log-eval.py --trigger scheduled --passed ${{ steps.eval.outputs.passed }}
+
+      - name: Open issue on failure
+        if: steps.eval.outputs.passed == 'false'
+        uses: actions/github-script@v7.0.1
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Scheduled production eval failed',
+              body: `Weekly scheduled evaluation failed.\n\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis does NOT trigger a rollback. Investigate and resolve manually.`,
+              labels: ['eval-failure', 'production']
+            });

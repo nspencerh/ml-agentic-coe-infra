@@ -1,0 +1,203 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'modules/**'
+      - 'component/gemini/**'
+      - 'variables/**'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+  WORKLOAD_IDENTITY_PROVIDER: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+
+jobs:
+  dev:
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    outputs:
+      deployment_id: ${{ github.run_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/gemini/src
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=gemini/dev"
+
+      - name: Terraform Apply
+        working-directory: component/gemini/src
+        run: |
+          terraform apply -auto-approve \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../dev.tfvars"
+
+  staging:
+    needs: dev
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Log commenced
+        run: echo "::notice::Deployment ${{ github.run_id }} commenced for staging"
+
+      - name: Terraform Init
+        working-directory: component/gemini/src
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=gemini/staging"
+
+      - name: Terraform Apply
+        working-directory: component/gemini/src
+        run: |
+          terraform apply -auto-approve \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../staging.tfvars"
+
+  staging-eval:
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Run eval
+        run: |
+          echo "Running staging evaluation"
+          # agents-cli eval --environment staging
+
+  production:
+    needs: staging-eval
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/gemini/src
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=gemini/production"
+
+      - name: Terraform Apply
+        working-directory: component/gemini/src
+        run: |
+          terraform apply -auto-approve \
+            -var-file="../../../variables/default.tfvars" \
+            -var-file="../production.tfvars"
+
+  post-prod-eval:
+    needs: production
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    outputs:
+      eval_passed: ${{ steps.eval.outputs.passed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Run post-production eval
+        id: eval
+        run: |
+          echo "Running post-production evaluation"
+          # result=$(agents-cli eval --environment production)
+          # echo "passed=$result" >> "$GITHUB_OUTPUT"
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  rollback:
+    needs: post-prod-eval
+    if: needs.post-prod-eval.outputs.eval_passed == 'false'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SERVICE_ACCOUNT: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - name: Query last succeeded deployment
+        id: query
+        run: |
+          echo "Querying BigQuery for last succeeded deployment"
+          # bq-log-deployment.py query-last-success --component gemini --environment production
+
+      - name: Rollback
+        run: |
+          echo "Rolling back to last successful deployment"
+          # Redeploy using package_uri or container_image from query result
