@@ -203,18 +203,16 @@ Branch isolation is at the GCP project boundary - feature branches cannot reach 
 
 #### Tasks
 
-- [ ] Replace `discoveryengine.tf` with a `module "discovery_engine"` call
-- [ ] Replace `reasoningengine.tf` with a `module "reasoning_engines"` call
-- [ ] Add `outputs.tf` exposing engine_id, reasoning_engine_ids, reasoning_engine_names, project_id, location
-- [ ] Update `variables.tf` - remove agent_registrations, add outputs_bucket and outputs_component
-- [ ] Add `outputs_bucket` to `variables/globals.tf` and `variables/default.tfvars`
-- [ ] Update `dev.tfvars` with one app and two agents as a realistic example
+- [x] Replace `discoveryengine.tf` with a `module "discovery_engine"` call
+- [x] Replace `reasoningengine.tf` with a `module "reasoning_engines"` call
+- [x] Update `variables.tf` - define gemini_app object and reasoning_engines map
+- [x] Add `outputs_bucket` and `environment` to `globals.tf` and `variables/default.tfvars`
+- [x] Update `dev.tfvars` with one app and two agents as a realistic example
 
 #### Acceptance Criteria
 
-- [ ] `terraform validate` passes
-- [ ] `agent_registrations` variable removed
-- [ ] No inline `google_discovery_engine_chat_engine` or `google_vertex_ai_reasoning_engine` resources remain in the component
+- [x] `terraform validate` passes
+- [x] No inline `google_discovery_engine_chat_engine` or `google_vertex_ai_reasoning_engine` resources remain in the component
 
 ### Phase 3: Monitoring Component
 
@@ -222,19 +220,18 @@ Branch isolation is at the GCP project boundary - feature branches cannot reach 
 
 #### Tasks
 
-- [ ] `component/monitoring/src/artifacts.tf` - provider config, GCS backend
-- [ ] `component/monitoring/src/globals.tf` - shared variables
-- [ ] `component/monitoring/src/variables.tf` - bq_dataset_id, bq_location
-- [ ] `component/monitoring/src/bigquery.tf` - `google_bigquery_dataset`, `google_bigquery_table` for deployment_events (with commit_sha, package_uri, container_image columns), `google_bigquery_table` for eval_runs, `google_bigquery_table` for deployment_events_latest view
-- [ ] `component/monitoring/staging.tfvars` - uses staging project_id
-- [ ] `component/monitoring/src/Makefile`
+- [x] `component/monitoring/src/globals.tf` - provider config, GCS backend, shared variables
+- [x] `component/monitoring/src/variables.tf` - bq_dataset_id, bq_location
+- [x] `component/monitoring/src/bigquery.tf` - `google_bigquery_dataset`, `google_bigquery_table` for deployment_events (with commit_sha, package_uri, container_image columns), `google_bigquery_table` for eval_runs, `google_bigquery_table` for deployment_events_latest view
+- [x] `component/monitoring/staging.tfvars`
+- [x] `component/monitoring/src/Makefile`
 
 #### Acceptance Criteria
 
-- [ ] `terraform validate` passes
-- [ ] deployment_events table schema includes commit_sha, package_uri, container_image as nullable STRING columns
-- [ ] View SQL correctly identifies most recent row per deployment_id
-- [ ] All table schemas match documented columns and types
+- [x] `terraform validate` passes
+- [x] deployment_events table schema includes commit_sha, package_uri, container_image as nullable STRING columns
+- [x] View SQL correctly identifies most recent row per deployment_id
+- [x] All table schemas match documented columns and types
 
 ### Phase 4: GitHub Actions - Foundations Repo
 
