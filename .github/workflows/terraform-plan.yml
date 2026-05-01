@@ -13,6 +13,11 @@ on:
         required: true
         type: string
         description: "Path to the environment tfvars file relative to component dir"
+      extra_args:
+        required: false
+        type: string
+        default: ""
+        description: "Additional terraform plan arguments (e.g. -var flags for feature branches)"
     outputs:
       plan_gcs_path:
         description: "GCS path where the plan binary was uploaded"
@@ -58,6 +63,7 @@ jobs:
           terraform plan -no-color \
             -var-file="../../../variables/default.tfvars" \
             -var-file="../${{ inputs.tfvars_file }}" \
+            ${{ inputs.extra_args }} \
             -out=tfplan
 
       - name: Upload plan to GCS
