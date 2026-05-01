@@ -1,10 +1,8 @@
-environment = "dev"
-
 gemini_app = {
-  engine_id      = "gemini-chat-dev"
-  display_name   = "Gemini Chat Dev"
+  engine_id      = "gemini-chat"
+  display_name   = "test-gemini-enterprise-iac"
   location       = "us"
-  data_store_ids = ["default-data-store"]
+  data_store_ids = []
 }
 
 reasoning_engines = {

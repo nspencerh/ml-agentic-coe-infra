@@ -40,17 +40,17 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=${{ inputs.component }}/${{ inputs.environment }}"
 
       - name: Download plan from GCS
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: |
           gsutil cp "gs://${{ vars.TF_STATE_BUCKET }}/${{ inputs.plan_gcs_path }}" tfplan
 
       - name: Terraform Apply
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: terraform apply tfplan

@@ -51,14 +51,14 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=${{ inputs.component }}/${{ inputs.environment }}"
 
       - name: Terraform Plan
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: |
           terraform plan -no-color \
             -var-file="../../../variables/default.tfvars" \
@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload plan to GCS
         id: upload
-        working-directory: component/${{ inputs.component }}/src
+        working-directory: component/${{ inputs.component }}
         run: |
           PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
           gsutil cp tfplan "gs://${{ vars.TF_STATE_BUCKET }}/${PLAN_PATH}"
