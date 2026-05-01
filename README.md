@@ -1,93 +1,68 @@
-# gemini-enterprise-foundations
+# Gemini Enterprise Foundations
 
+This repository contains the foundational Terraform infrastructure for deploying Gemini Enterprise solutions on Google Cloud Platform. It provisions [Discovery Engine](https://cloud.google.com/generative-ai-app-builder/docs/introduction) apps and [Vertex AI Agent Platform (Reasoning Engine)](https://cloud.google.com/vertex-ai/docs/agent-builder/introduction) shells.
 
+This repository is designed to be used in tandem with a separate `gemini-agents` monorepo, which handles agent code deployment and registration. The two repositories are decoupled via a GCS outputs blob that this repository writes after each apply.
 
-## Getting started
+## Architecture
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The repository is structured into reusable Terraform `modules` and deployable `components`.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+*   `modules/discovery-engine`: Provisions a `google_discovery_engine_chat_engine`.
+*   `modules/reasoning-engines`: Provisions multiple `google_vertex_ai_reasoning_engine` resources and writes their IDs to a GCS blob for consumption by downstream CI/CD.
+*   `component/gemini`: A deployable unit that combines the `discovery-engine` and `reasoning-engines` modules to provision a complete agent environment.
+*   `component/monitoring`: Provisions BigQuery tables for tracking deployment and evaluation events.
 
-## Add your files
+### CI/CD
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+The CI/CD process is managed by GitHub Actions and is designed around a promotion pipeline:
 
-```
-cd existing_repo
-git remote add origin https://gitlab.mantelgroup.com.au/kasna/launchpad-examples/gemini-enterprise-foundations.git
-git branch -M main
-git push -uf origin main
-```
+`PR open` -> `Ephemeral Environment Apply` -> `PR close` -> `Ephemeral Environment Destroy`
 
-## Integrate with your tools
+`Merge to main` -> `dev` -> `staging` (approval gate) -> `production` (approval gate)
 
-* [Set up project integrations](https://gitlab.mantelgroup.com.au/kasna/launchpad-examples/gemini-enterprise-foundations/-/settings/integrations)
+Deployment and evaluation history is logged to BigQuery tables provisioned by the `monitoring` component.
 
-## Collaborate with your team
+## Prerequisites
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Before you can deploy resources using this repository, you will need:
 
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+1.  **GCP Project(s)**: Separate projects for `dev`, `staging`, and `production` environments are recommended.
+2.  **GCS Bucket for Terraform State**: A GCS bucket to store Terraform state files.
+3.  **GCS Bucket for Outputs**: A GCS bucket to store the JSON outputs blob. This can be the same as the state bucket.
+4.  **Workload Identity Federation**: Configured in each GCP project to allow GitHub Actions to authenticate with Google Cloud without service account keys.
+5.  **GitHub Environments**: `dev`, `staging`, and `production` environments configured in GitHub with appropriate protection rules and approvers.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Components
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+#### `gemini`
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+This component deploys a Discovery Engine app and a set of Reasoning Engine shells. Configuration is managed via `.tfvars` files for each environment.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Example `staging.tfvars`:
+```terraform
+gemini_app = {
+  engine_id      = "my-gemini-app-staging"
+  display_name   = "My Gemini App (Staging)"
+  data_store_ids = ["my-data-store_12345"]
+}
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+reasoning_engines = {
+  "customer-service-agent" = {
+    display_name = "Customer Service Agent"
+  },
+  "internal-helpdesk-agent" = {
+    display_name = "Internal Helpdesk Agent"
+  }
+}
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+#### `monitoring`
 
-## License
-For open source projects, say how it is licensed.
+This component deploys the BigQuery dataset and tables required for CI/CD logging. It should be deployed once to a central monitoring or staging project.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Deployment
+
+Deployments are handled automatically by the GitHub Actions workflows on pull requests and merges to the `main` branch.
