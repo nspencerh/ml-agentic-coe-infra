@@ -1,8 +1,9 @@
 ifndef $(COMPONENT)
-	COMPONENT := $(shell basename $(shell dirname ${PWD}))
+	COMPONENT := $(shell basename ${PWD})
 endif
 
-ENV?=dev
+ENV?=discovery
+LOCATION?=us
 
 GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 
@@ -11,8 +12,9 @@ GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 BACKEND_BUCKET := agent-space-449923
 BACKEND_PREFIX := gemini-foundations/$(COMPONENT)
 
-TFVARS := -var-file=$(GLOBAL_PATH)/variables/default.tfvars \
-	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/${ENV}.tfvars
+TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
+	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
+	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/${ENV}.tfvars
 
 PLAN := tfplan
 PLAN_TEXT := tfplan.txt
