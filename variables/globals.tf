@@ -9,17 +9,18 @@ variable "region" {
   default     = "us"
 }
 
-variable "build_project_id" {
-  type        = string
-  description = "The GCP project ID used for build and CI/CD artifacts"
-}
+# variable "build_project_id" {
+#   type        = string
+#   description = "The GCP project ID used for build and CI/CD artifacts"
+# }
 
 variable "environment" {
   type        = string
   description = "The environment name"
 }
 
-variable "outputs_bucket" {
+variable "environment_suffix" {
   type        = string
-  description = "GCS bucket for writing outputs blobs consumed by agent CI/CD"
+  default     = null
+  description = "Optional suffix for resource IDs (used by feature branch deployments to avoid collisions). Leave empty for preprod/prod."
 }
