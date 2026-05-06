@@ -1,9 +1,9 @@
 module "discovery_engine" {
-  source = "../../../modules/discovery-engine"
+  source = "../../modules/discovery-engine"
 
   project_id            = var.project_id
-  engine_id             = var.gemini_app.engine_id
-  display_name          = var.gemini_app.display_name
+  engine_id             = var.ephemeral_suffix != null ? "${var.gemini_app.engine_id}-${var.ephemeral_suffix}" : var.gemini_app.engine_id
+  display_name          = var.ephemeral_suffix != null ? "${var.gemini_app.display_name} (${var.ephemeral_suffix})" : var.gemini_app.display_name
   location              = var.gemini_app.location
   collection_id         = var.gemini_app.collection_id
   data_store_ids        = var.gemini_app.data_store_ids
