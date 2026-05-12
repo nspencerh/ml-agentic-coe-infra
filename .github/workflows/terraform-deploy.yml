@@ -6,6 +6,7 @@ on:
     paths:
       - 'component/**'
       - 'variables/**'
+    tags: 'v[\w]+/[0-9]{8}' # 
   workflow_dispatch:
     inputs:
       component:
@@ -13,8 +14,16 @@ on:
         required: true 
         type: choice
         options:
-          - gemini
+          - gemini-enterprise-core
           - monitoring
+      location:
+        required: false
+        type: choice
+        options:
+          - us
+          - au
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. 'au' for components requiring data sovereignty)"
 
 permissions:
   contents: read
@@ -59,9 +68,36 @@ jobs:
             echo "components=${JSON}" >> "$GITHUB_OUTPUT"
           fi
 
+  # --- Discovery ---
+  discovery-plan:
+    needs: [detect]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: discovery
+      tfvars_file: env/discovery.tfvars
+    secrets: inherit
+
+  discovery-apply:
+    needs: [discovery-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components) }}
+    with:
+      component: ${{ matrix.component }}
+      environment: discovery
+      plan_gcs_path: ${{ needs.discovery-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
   # --- Preprod ---
   preprod-plan:
     needs: [detect]
+    # TODO - SemVer/CalVer?
+    if: github.ref == 'refs/heads/main' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components) }}
@@ -73,7 +109,7 @@ jobs:
     secrets: inherit
 
   preprod-apply:
-    needs: [detect]
+    needs: [preprod-plan]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
@@ -85,9 +121,8 @@ jobs:
     secrets: inherit
 
   preprod-eval:
-    needs: [detect, preprod-apply]
+    needs: [preprod-apply]
     runs-on: ubuntu-latest
-    environment: preprod
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -103,9 +138,21 @@ jobs:
           echo "Running preprod evaluation"
           # agents-cli eval --environment preprod
 
+      - name: Log Deployment Succeeded
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment preprod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment preprod --commit_sha ${{ github.sha }} --failure_reason "Preprod eval failed"
+
   # --- Production ---
   prod-plan:
     needs: [detect, preprod-eval]
+    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components) }}
@@ -117,7 +164,7 @@ jobs:
     secrets: inherit
 
   prod-apply:
-    needs: [detect, prod-plan]
+    needs: [prod-plan]
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components) }}
@@ -129,9 +176,8 @@ jobs:
     secrets: inherit
 
   post-prod-eval:
-    needs: prod-apply
+    needs: [prod-apply]
     runs-on: ubuntu-latest
-    environment: production
     outputs:
       eval_passed: ${{ steps.eval.outputs.passed }}
     steps:
@@ -151,6 +197,18 @@ jobs:
           # result=$(agents-cli eval --environment production)
           # echo "passed=$result" >> "$GITHUB_OUTPUT"
           echo "passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log Deployment Succeeded
+        if: steps.eval.outputs.passed == 'true'
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment production --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: steps.eval.outputs.passed == 'false' || failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment production --commit_sha ${{ github.sha }} --failure_reason "Production eval failed"
 
   rollback:
     needs: post-prod-eval
