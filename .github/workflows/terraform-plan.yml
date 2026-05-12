@@ -9,10 +9,11 @@ on:
       environment:
         required: true
         type: string
-      tfvars_file:
-        required: true
+      location:
+        required: false
         type: string
-        description: "Path to the environment tfvars file relative to component dir"
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. for components requiring data sovereignty)"
       extra_args:
         required: false
         type: string
@@ -26,6 +27,7 @@ on:
 permissions:
   contents: read
   id-token: write
+  pull-requests: write
 
 env:
   TF_VERSION: "1.9.8"
@@ -50,21 +52,21 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Init
-        working-directory: component/${{ inputs.component }}
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=${{ inputs.component }}/${{ inputs.environment }}"
-
       - name: Terraform Plan
+        id: plan
         working-directory: component/${{ inputs.component }}
         run: |
-          terraform plan -no-color \
-            -var-file="../../../variables/default.tfvars" \
-            -var-file="../${{ inputs.tfvars_file }}" \
-            ${{ inputs.extra_args }} \
-            -out=tfplan
+          make plan \
+            ENV=${{ inputs.environment }} \
+            LOCATION=${{ inputs.location }} \
+            EXTRA_ARGS="${{ inputs.extra_args }}"
+
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2.9.0
+        with:
+          header: plan-${{ inputs.component }}-${{ inputs.environment }}
+          path: component/${{ inputs.component }}/tfplan.txt
 
       - name: Upload plan to GCS
         id: upload
