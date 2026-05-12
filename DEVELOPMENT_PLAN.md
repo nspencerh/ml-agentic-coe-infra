@@ -19,7 +19,7 @@ This repo provisions Gemini Enterprise (Discovery Engine) apps and Vertex AI Age
 - FR-009: Every deployment writes append-only rows to `deployment_events` with status: `commenced` (before apply), `deployed` (after successful apply, includes artifact metadata), `succeeded` (after eval passes), or `failed` (on apply or eval failure). Each row has a unique `event_id`; rows for the same deployment share a `deployment_id` (GHA run_id).
 - FR-010: The agent monorepo scaffold (under `docs/agent-monorepo/`) has a single auto-discovering `deploy.yml` that reads GCS outputs blobs across all components via wildcard path, detects changed agent directories via path filtering, and runs `agents-cli deploy + publish` per changed agent.
 - FR-011: A `new-agent.yml` workflow_dispatch workflow in the agent repo scaffolds a new agent directory, opens a PR in the agent repo, and opens a PR in the foundations repo adding the new reasoning engine to the tfvars. It is callable via the GitHub REST API dispatch endpoint.
-- FR-012: `outputs_bucket` is a global variable shared across all components via `variables/globals.tf`. Each component writes its GCS blob to `outputs/{component}/{environment}/gemini-outputs.json`.
+- FR-012: `registry_bucket` is a global variable shared across all components via `variables/globals.tf`. Each component writes its GCS blob to `registry/{component}/{environment}/agent-registry.json`.
 
 ### Non-Functional Requirements
 
@@ -239,20 +239,20 @@ Branch isolation is at the GCP project boundary - feature branches cannot reach 
 
 #### Tasks
 
-- [ ] `terraform-plan.yml` - on PR: init, plan, post plan output as PR comment
-- [ ] `terraform-pr-environment.yml` - on PR open/sync: apply with state prefix `gemini/pr-{number}`; on PR close: destroy
-- [ ] `terraform-deploy.yml` - on push to main: dev (auto) -> staging gate (engineers) -> staging eval -> prod gate (admins) -> post-prod eval -> rollback job on eval failure; logs deployment_events rows at each stage
-- [ ] `evaluate-scheduled.yml` - weekly cron: eval production, write to eval_runs (trigger=scheduled), open GitHub issue on failure, no rollback job
+- [x] `terraform-plan.yml` - on PR: init, plan, post plan output as PR comment
+- [x] `terraform-pr-environment.yml` - on PR open/sync: apply with state prefix `gemini/pr-{number}`; on PR close: destroy
+- [x] `terraform-deploy.yml` - on push to main: dev (auto) -> staging gate (engineers) -> staging eval -> prod gate (admins) -> post-prod eval -> rollback job on eval failure; logs deployment_events rows at each stage
+- [x] `evaluate-scheduled.yml` - weekly cron: eval production, write to eval_runs (trigger=scheduled), open GitHub issue on failure, no rollback job
 - [ ] Document required GitHub Environments and reviewers in README
 
 #### Acceptance Criteria
 
-- [ ] Feature branch commits cannot reach staging or production (trigger: `push branches: [main]`)
-- [ ] Staging GitHub Environment has `engineers` team as required reviewer
-- [ ] Production GitHub Environment has `admins` team as required reviewer
-- [ ] Post-prod eval failure triggers rollback job only within terraform-deploy.yml
-- [ ] evaluate-scheduled.yml has no rollback job
-- [ ] All action versions pinned
+- [x] Feature branch commits cannot reach staging or production (trigger: `push branches: [main]`)
+- [x] Staging GitHub Environment has `engineers` team as required reviewer
+- [x] Production GitHub Environment has `admins` team as required reviewer
+- [x] Post-prod eval failure triggers rollback job only within terraform-deploy.yml
+- [x] evaluate-scheduled.yml has no rollback job
+- [x] All action versions pinned
 
 ### Phase 5: Agent Monorepo Scaffold
 
@@ -312,3 +312,4 @@ Branch isolation is at the GCP project boundary - feature branches cannot reach 
 - `FOUNDATIONS_REPO_TOKEN` secret in agent repo (GitHub PAT or App token with PR write on foundations repo)
 - `agents-cli` available on GHA runners in the agent repo
 - Google provider >= 7.30, Terraform >= 1.9, Python >= 3.11
+orm >= 1.9, Python >= 3.11
