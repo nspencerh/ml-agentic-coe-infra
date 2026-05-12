@@ -20,7 +20,7 @@ resource "google_vertex_ai_reasoning_engine" "engines" {
 }
 
 locals {
-  outputs_blob = jsonencode({
+  reasoning_engine_register_json = jsonencode({
     engine_id  = var.engine_id
     project_id = var.project_id
     location   = var.region
@@ -34,10 +34,10 @@ locals {
   })
 }
 
-resource "google_storage_bucket_object" "outputs" {
-  bucket  = var.outputs_bucket
-  name    = "outputs/${var.outputs_component}/${var.outputs_environment}/gemini-outputs.json"
-  content = local.outputs_blob
+resource "google_storage_bucket_object" "reasoning_engine_register_artefact" {
+  bucket  = var.registry_bucket
+  name    = "registry/${var.registry_component}/${var.registry_environment}/agent-registry.json"
+  content = local.reasoning_engine_register_json
 
   content_type = "application/json"
 }

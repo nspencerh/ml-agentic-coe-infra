@@ -28,17 +28,17 @@ variable "reasoning_engines" {
   default = {}
 }
 
-variable "outputs_bucket" {
+variable "registry_bucket" {
   type        = string
-  description = "GCS bucket for writing the outputs blob"
+  description = "GCS bucket name for storing component registry outputs (e.g. reasoning engine IDs)"
 }
 
-variable "outputs_component" {
+variable "registry_component" {
   type        = string
-  description = "Component name used in the GCS outputs path"
+  description = "Component name used in the GCS registry blob path"
 }
 
-variable "outputs_environment" {
+variable "registry_environment" {
   type        = string
-  description = "Environment name used in the GCS outputs path"
+  description = "Environment name used in the GCS registry blob path"
 }

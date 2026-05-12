@@ -16,4 +16,4 @@ reasoning_engines = {
   }
 }
 
-reasoning_engine_artefact_bucket_name = "tu-agentspace-pp-2"
+registry_bucket = "tu-agentspace-pp-2"

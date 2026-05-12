@@ -9,6 +9,6 @@ output "reasoning_engine_names" {
 }
 
 output "outputs_blob_path" {
-  value       = "gs://${google_storage_bucket_object.outputs.bucket}/${google_storage_bucket_object.outputs.name}"
+  value       = google_storage_bucket_object.reasoning_engine_register_artefact.self_link
   description = "Full GCS path to the outputs blob"
 }

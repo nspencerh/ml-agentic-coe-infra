@@ -28,15 +28,15 @@ variable "reasoning_engines" {
   default = {}
 }
 
-variable "reasoning_engine_artefact_bucket_name" {
-  description = "Name of the GCS bucket for writing the Reasoning Engine register JSON blob (e.g. my-bucket - no gs:// prefix)"
-  type = string
-}
-
 variable "ephemeral_suffix" {
   type        = string
   description = "Optional ephemeral suffix to append to resource names for non-blocking development environments (e.g. dev/test)"
   default     = null
+}
+
+variable "registry_bucket" {
+  description = "Name of the GCS bucket for writing the Reasoning Engine registry JSON blob (e.g. my-bucket - no gs:// prefix)"
+  type        = string
 }
 
 check "ephemeral_suffix_only_in_dev" {
