@@ -97,17 +97,17 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        working-directory: component/${{ matrix.component }}/src
+        working-directory: component/${{ matrix.component }}
         run: |
           terraform init \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="prefix=${{ matrix.component }}/pr-${{ github.event.number }}"
 
       - name: Terraform Destroy
-        working-directory: component/${{ matrix.component }}/src
+        working-directory: component/${{ matrix.component }}
         run: |
           terraform destroy -auto-approve \
-            -var-file="../../../variables/default.tfvars" \
-            -var-file="../dev.tfvars" \
+            -var-file="../../variables/default.tfvars" \
+            -var-file="env/discovery.tfvars" \
             -var="environment=pr-${{ github.event.number }}" \
             -var="environment_suffix=pr-${{ github.event.number }}"
