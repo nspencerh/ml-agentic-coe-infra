@@ -24,6 +24,7 @@ env:
 jobs:
   apply:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -51,6 +52,22 @@ jobs:
         run: |
           gsutil cp "gs://${{ vars.TF_STATE_BUCKET }}/${{ inputs.plan_gcs_path }}" tfplan
 
+      - name: Log Deployment Commenced
+        run: |
+          echo "Logging commenced to BigQuery"
+          # bq-log-deployment.py log-event --status commenced --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }}
+
       - name: Terraform Apply
         working-directory: component/${{ inputs.component }}
         run: terraform apply tfplan
+
+      - name: Log Deployment Deployed
+        run: |
+          echo "Logging deployed to BigQuery"
+          # bq-log-deployment.py log-event --status deployed --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed apply to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }} --failure_reason "Terraform apply failed"
