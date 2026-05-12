@@ -16,6 +16,12 @@ TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
 	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
 	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/${ENV}.tfvars
 
+ifdef TARGET
+	TARGET := -target $(TARGET)
+else
+	TARGET := 
+endif
+
 PLAN := tfplan
 PLAN_TEXT := tfplan.txt
 PLAN_JSON := tfplan.json
@@ -43,7 +49,7 @@ workspace:
 
 plan: init validate workspace
 	terraform plan -no-color \
-		$(TFVARS) \
+		$(TFVARS) $(TARGET) \
 		-out $(PLAN)
 	terraform show -no-color $(PLAN) > $(PLAN_TEXT)
 	terraform show -json $(PLAN) > $(PLAN_JSON)
