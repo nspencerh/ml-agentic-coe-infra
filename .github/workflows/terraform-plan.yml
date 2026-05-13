@@ -19,6 +19,11 @@ on:
         type: string
         default: ""
         description: "Additional terraform plan arguments (e.g. -var flags for feature branches)"
+      service_account:
+        required: true
+        type: string
+        default: ""
+        description: "Service account to use for Terraform operations"
     outputs:
       plan_gcs_path:
         description: "GCS path where the plan binary was uploaded"
@@ -44,8 +49,8 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ inputs.service_account }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3.1.2

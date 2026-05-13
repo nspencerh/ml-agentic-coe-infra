@@ -4,13 +4,17 @@ endif
 
 ENV?=discovery
 LOCATION?=us
+QUALIFIER?=ml-ds-pp-hub
+PROJECT_ID?=tu-machinelearning-ds-1
+BACKEND_SERVICE_ACCOUNT?=cicd-backend-$(QUALIFIER)@$(PROJECT_ID).iam.gserviceaccount.com
+DEPLOY_SERVICE_ACCOUNT?=cicd-deploy-$(QUALIFIER)@$(PROJECT_ID).iam.gserviceaccount.com
 
 GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 
 .PHONY: init validate fmt plan apply workspace
 
-BACKEND_BUCKET := agent-space-449923
-BACKEND_PREFIX := gemini-foundations/$(COMPONENT)
+BACKEND_BUCKET := cicd-tfstate-$(PROJECT_ID)-ause1-$(QUALIFIER)
+BACKEND_PREFIX := ml-agentic-coe-infra/$(COMPONENT)
 
 TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
 	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
@@ -42,6 +46,7 @@ init:
 	terraform init \
 		-backend-config=bucket=$(BACKEND_BUCKET) \
 		-backend-config=prefix=$(BACKEND_PREFIX) \
+		-backend-config=impersonate_service_account=$(GHA_SERVICE_ACCOUNT) \
 		-reconfigure
 
 workspace:
@@ -49,12 +54,13 @@ workspace:
 
 plan: init validate workspace
 	terraform plan -no-color \
+		-var="deploy_service_account=$(DEPLOY_SERVICE_ACCOUNT)" \
 		$(TFVARS) $(TARGET) \
 		-out $(PLAN)
 	terraform show -no-color $(PLAN) > $(PLAN_TEXT)
 	terraform show -json $(PLAN) > $(PLAN_JSON)
 
-apply: workspace
-	terraform apply \
-		-auto-approve \
+ apply: workspace
+ 	terraform apply \
+ 		-auto-approve \
 		$(PLAN)

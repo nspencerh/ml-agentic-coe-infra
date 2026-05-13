@@ -79,6 +79,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: discovery
       tfvars_file: env/discovery.tfvars
+      service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
     secrets: inherit
 
   discovery-apply:
@@ -106,6 +107,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: preprod
       tfvars_file: env/preprod.tfvars
+      service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     secrets: inherit
 
   preprod-apply:
@@ -130,7 +132,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Run preprod evaluation
@@ -161,6 +163,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: production
       tfvars_file: env/prod.tfvars
+      service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     secrets: inherit
 
   prod-apply:
@@ -187,7 +190,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Run post-production eval
@@ -222,7 +225,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2.1.8
         with:
-          workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
 
       - name: Query last succeeded deployment
