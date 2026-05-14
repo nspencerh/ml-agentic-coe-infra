@@ -115,7 +115,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=${{ env.tf_state_bucket }}" \
-            -backend-config="prefix=ml-agentic-coe-infra/${{ matrix.component }}" \
+            -backend-config="prefix=tfstate/${{ matrix.component }}" \
             -backend-config=impersonate_service_account=${{ env.backend_service_account }}
           terraform workspace select ${{ env.environment }}
 
