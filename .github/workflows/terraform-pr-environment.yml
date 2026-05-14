@@ -109,10 +109,10 @@ jobs:
         working-directory: component/${{ matrix.component }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ inputs.tf_state_bucket }}" \
+            -backend-config="bucket=${{ tf_state_bucket }}" \
             -backend-config="prefix=ml-agentic-coe-infra/${{ matrix.component }}" \
-            -backend-config=impersonate_service_account=${{ inputs.backend_service_account }}
-          terraform workspace select ${{ inputs.environment }}
+            -backend-config=impersonate_service_account=${{ backend_service_account }}
+          terraform workspace select ${{ environment }}
         # -backend-config="prefix=${{ matrix.component }}/pr-${{ github.event.number }}"
 
       - name: Terraform Destroy
