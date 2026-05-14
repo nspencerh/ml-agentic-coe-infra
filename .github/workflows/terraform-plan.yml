@@ -86,6 +86,7 @@ jobs:
         id: upload
         working-directory: component/${{ inputs.component }}
         run: |
+          terraform show -json tfplan
           PLAN_PATH="plans/${{ inputs.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
           gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \
             --impersonate-service-account=${{ inputs.backend_service_account }}
