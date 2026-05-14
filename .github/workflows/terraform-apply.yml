@@ -79,6 +79,7 @@ jobs:
         working-directory: component/${{ inputs.component }}
         run: |
           terraform show -json tfplan
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
           terraform apply tfplan
 
       - name: Log Deployment Deployed
