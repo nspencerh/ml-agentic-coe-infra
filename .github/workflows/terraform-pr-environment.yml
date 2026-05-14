@@ -58,7 +58,8 @@ jobs:
       component: ${{ matrix.component }}
       environment: pr-${{ github.event.number }}
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
-      extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
+      #TODO: not sure if this is needed. 
+      # extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
     secrets: inherit
 
   apply:
