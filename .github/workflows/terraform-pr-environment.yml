@@ -90,7 +90,7 @@ jobs:
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components) }}
-    with:
+    env:
       environment: discovery
       tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       backend_service_account: cicd-backend-ml-ds-pp-hub@tu-machinelearning-ds-1.iam.gserviceaccount.com
@@ -113,10 +113,10 @@ jobs:
         working-directory: component/${{ matrix.component }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ tf_state_bucket }}" \
+            -backend-config="bucket=${{ env.tf_state_bucket }}" \
             -backend-config="prefix=ml-agentic-coe-infra/${{ matrix.component }}" \
-            -backend-config=impersonate_service_account=${{ backend_service_account }}
-          terraform workspace select ${{ environment }}
+            -backend-config=impersonate_service_account=${{ env.backend_service_account }}
+          terraform workspace select ${{ env.environment }}
 
       - name: Terraform Destroy
         working-directory: component/${{ matrix.component }}
