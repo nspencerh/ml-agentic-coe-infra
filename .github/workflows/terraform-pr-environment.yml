@@ -94,6 +94,7 @@ jobs:
       environment: discovery
       tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       backend_service_account: cicd-backend-ml-ds-pp-hub@tu-machinelearning-ds-1.iam.gserviceaccount.com
+      deploy_service_account: cicd-deploy-ml-ds-pp-hub@tu-machinelearning-ds-1.iam.gserviceaccount.com
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -122,6 +123,7 @@ jobs:
         working-directory: component/${{ matrix.component }}
         run: |
           terraform destroy -auto-approve \
+            -var="deploy_service_account=${{ env.deploy_service_account }}" \
             -var-file="../../variables/default.tfvars" \
             -var-file="env/discovery.tfvars" \
         # -var="environment=pr-${{ github.event.number }}" \
