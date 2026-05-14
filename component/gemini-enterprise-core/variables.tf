@@ -45,3 +45,8 @@ check "ephemeral_suffix_only_in_dev" {
     error_message = "The 'ephemeral_suffix' variable can only be set when the environment is 'dev'."
   }
 }
+
+variable "deploy_service_account" {
+  type        = string
+  description = "Service account for deploying resources."
+}
