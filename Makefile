@@ -46,7 +46,7 @@ init:
 	terraform init \
 		-backend-config=bucket=$(BACKEND_BUCKET) \
 		-backend-config=prefix=$(BACKEND_PREFIX) \
-		-backend-config=impersonate_service_account=$(GHA_SERVICE_ACCOUNT) \
+		-backend-config=impersonate_service_account=$(BACKEND_SERVICE_ACCOUNT) \
 		-reconfigure
 
 workspace:
