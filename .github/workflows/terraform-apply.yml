@@ -13,6 +13,16 @@ on:
         required: true
         type: string
         description: "GCS path to the plan binary to apply"
+      service_account:
+        required: true
+        type: string
+        default: ""
+        description: "Service account to use for Terraform operations"
+      tf_state_bucket:
+        required: true
+        type: string
+        default: ""
+        description: "GCS bucket for Terraform state"
 
 permissions:
   contents: read
@@ -33,7 +43,7 @@ jobs:
         uses: google-github-actions/auth@v2.1.8
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+          service_account: ${{ inputs.service_account }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3.1.2
@@ -44,13 +54,13 @@ jobs:
         working-directory: component/${{ inputs.component }}
         run: |
           terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="prefix=${{ inputs.component }}/${{ inputs.environment }}"
+            -backend-config="bucket=${{ inputs.tf_state_bucket }}" \
+            -backend-config="prefix=ml-agentic-coe-infra/${{ inputs.component }}"
 
       - name: Download plan from GCS
         working-directory: component/${{ inputs.component }}
         run: |
-          gsutil cp "gs://${{ vars.TF_STATE_BUCKET }}/${{ inputs.plan_gcs_path }}" tfplan
+          gsutil cp "gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}" tfplan
 
       - name: Log Deployment Commenced
         run: |
