@@ -58,6 +58,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: pr-${{ github.event.number }}
       tfvars_file: dev.tfvars
+      service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
       extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
     secrets: inherit
 
