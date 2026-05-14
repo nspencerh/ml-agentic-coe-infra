@@ -60,7 +60,6 @@ jobs:
       # environment: pr-${{ github.event.number }}
       environment: discovery
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
-      TODO: not sure if this is needed. 
       extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
     secrets: inherit
 
