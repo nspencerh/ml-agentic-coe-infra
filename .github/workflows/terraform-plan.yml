@@ -64,6 +64,7 @@ jobs:
           make plan \
             ENV=${{ inputs.environment }} \
             LOCATION=${{ inputs.location }} \
+            GHA_SERVICE_ACCOUNT=${{ inputs.service_account }} \
             EXTRA_ARGS="${{ inputs.extra_args }}"
 
       # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
