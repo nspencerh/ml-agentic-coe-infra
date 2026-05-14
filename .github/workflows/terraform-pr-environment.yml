@@ -125,7 +125,6 @@ jobs:
           terraform destroy -auto-approve \
             -var="deploy_service_account=${{ env.deploy_service_account }}" \
             -var-file="../../variables/default.tfvars" \
-            -var-file="../../variables/env/us/discovery.tfvars"
-            -var-file="env/discovery.tfvars" 
+            -var-file="../../variables/env/us/discovery.tfvars" 
         # -var="environment=pr-${{ github.event.number }}" \
         # -var="environment_suffix=pr-${{ github.event.number }}"
