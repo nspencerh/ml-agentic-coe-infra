@@ -14,7 +14,7 @@ GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 .PHONY: init validate fmt plan apply workspace
 
 BACKEND_BUCKET := cicd-tfstate-$(PROJECT_ID)-ause1-$(QUALIFIER)
-BACKEND_PREFIX := tfsate/$(COMPONENT)
+BACKEND_PREFIX := tfstate/$(COMPONENT)
 
 TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
 	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
