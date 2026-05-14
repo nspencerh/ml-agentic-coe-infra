@@ -24,6 +24,14 @@ on:
         type: string
         default: ""
         description: "Service account to use for Terraform operations"
+      tf_state_bucket:
+        required: true
+        type: string
+        description: "GCS bucket for storing Terraform state"
+      backend_service_account:
+        required: true
+        type: string
+        description: "Service account to use for Terraform backend operations"
     outputs:
       plan_gcs_path:
         description: "GCS path where the plan binary was uploaded"
@@ -74,11 +82,11 @@ jobs:
       #     header: plan-${{ inputs.component }}-${{ inputs.environment }}
       #     path: component/${{ inputs.component }}/tfplan.txt
 
-      #NOTE: commenting this for now to make it work. 
-      # - name: Upload plan to GCS
-      #   id: upload
-      #   working-directory: component/${{ inputs.component }}
-      #   run: |
-      #     PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
-      #     gsutil cp tfplan "gs://${{ vars.TF_STATE_BUCKET }}/${PLAN_PATH}"
-      #     echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
+      - name: Upload plan to GCS
+        id: upload
+        working-directory: component/${{ inputs.component }}
+        run: |
+          PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
+          gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \ 
+            --impersonate-service-account= ${{ inputs.backend_service_account }}
+          echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"

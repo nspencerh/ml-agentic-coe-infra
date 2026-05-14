@@ -61,6 +61,8 @@ jobs:
       environment: discovery
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
       extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
+      tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
+      backend_service_account: cicd-backend-ml-ds-pp-hub@tu-machinelearning-ds-1.iam.gserviceaccount.com
     secrets: inherit
 
   apply:
@@ -72,7 +74,9 @@ jobs:
     uses: ./.github/workflows/terraform-apply.yml
     with:
       component: ${{ matrix.component }}
-      environment: pr-${{ github.event.number }}
+      # TODO: removing this for now as it fails retrieving the .tfvars.
+      # environment: pr-${{ github.event.number }}
+      environment: discovery
       plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
     secrets: inherit
 
