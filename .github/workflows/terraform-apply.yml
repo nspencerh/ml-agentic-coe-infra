@@ -62,6 +62,7 @@ jobs:
             -backend-config="bucket=${{ inputs.tf_state_bucket }}" \
             -backend-config="prefix=ml-agentic-coe-infra/${{ inputs.component }}" \
             -backend-config=impersonate_service_account=${{ inputs.backend_service_account }}
+          terraform workspace select ${{ inputs.environment }}
 
       - name: Download plan from GCS
         working-directory: component/${{ inputs.component }}
@@ -77,10 +78,7 @@ jobs:
 
       - name: Terraform Apply
         working-directory: component/${{ inputs.component }}
-        run: |
-          terraform show -json tfplan
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }}
-          terraform apply tfplan
+        run: terraform apply tfplan
 
       - name: Log Deployment Deployed
         run: |
