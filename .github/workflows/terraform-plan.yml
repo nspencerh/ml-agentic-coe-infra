@@ -74,10 +74,11 @@ jobs:
       #     header: plan-${{ inputs.component }}-${{ inputs.environment }}
       #     path: component/${{ inputs.component }}/tfplan.txt
 
-      - name: Upload plan to GCS
-        id: upload
-        working-directory: component/${{ inputs.component }}
-        run: |
-          PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
-          gsutil cp tfplan "gs://${{ vars.TF_STATE_BUCKET }}/${PLAN_PATH}"
-          echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
+      #NOTE: commenting this for now to make it work. 
+      # - name: Upload plan to GCS
+      #   id: upload
+      #   working-directory: component/${{ inputs.component }}
+      #   run: |
+      #     PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
+      #     gsutil cp tfplan "gs://${{ vars.TF_STATE_BUCKET }}/${PLAN_PATH}"
+      #     echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
