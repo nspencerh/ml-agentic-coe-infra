@@ -61,6 +61,6 @@ plan: init validate workspace
 	terraform show -json $(PLAN) > $(PLAN_JSON)
 
  apply: workspace
- 	terraform apply \
+	terraform apply \
  		-auto-approve \
 		$(PLAN)
