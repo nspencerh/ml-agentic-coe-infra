@@ -88,5 +88,5 @@ jobs:
         run: |
           PLAN_PATH="plans/${{ inputs.component }}/${{ inputs.environment }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
           gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \ 
-            --impersonate-service-account= ${{ inputs.backend_service_account }}
+            --impersonate-service-account=${{ inputs.backend_service_account }}
           echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
