@@ -63,18 +63,11 @@ jobs:
             -backend-config="prefix=ml-agentic-coe-infra/${{ inputs.component }}" \
             -backend-config=impersonate_service_account=${{ inputs.backend_service_account }}
 
-      - name: Debug Backend Config (Apply)
-        working-directory: component/${{ inputs.component }}
-        run: |
-          echo "--- .terraform/terraform.tfstate (apply) ---"
-          cat .terraform/terraform.tfstate
-
       - name: Download plan from GCS
         working-directory: component/${{ inputs.component }}
         run: |
           gcloud storage cp "gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}" tfplan \
             --impersonate-service-account=${{ inputs.backend_service_account }}
-          echo "##########"
           echo "Plan downloaded from gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}"
 
       - name: Log Deployment Commenced

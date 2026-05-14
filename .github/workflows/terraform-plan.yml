@@ -74,12 +74,6 @@ jobs:
             LOCATION=${{ inputs.location }} \
             EXTRA_ARGS="${{ inputs.extra_args }}"
 
-      - name: Debug Backend Config (Plan)
-        working-directory: component/${{ inputs.component }}
-        run: |
-          echo "--- .terraform/terraform.tfstate (plan) ---"
-          cat .terraform/terraform.tfstate
-
       # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
       # - name: Post Plan to PR
       #   if: github.event_name == 'pull_request'
@@ -96,5 +90,4 @@ jobs:
           gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \
             --impersonate-service-account=${{ inputs.backend_service_account }}
           echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
-          echo "##########"
           echo "Plan uploaded to gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}"

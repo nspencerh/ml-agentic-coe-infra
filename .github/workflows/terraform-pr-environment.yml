@@ -80,7 +80,8 @@ jobs:
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
       tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       backend_service_account: cicd-backend-ml-ds-pp-hub@tu-machinelearning-ds-1.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
+      #plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
+      plan_gcs_path: plans/${{ matrix.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan
     secrets: inherit
 
   destroy:
