@@ -69,6 +69,9 @@ jobs:
           gcloud storage cp "gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}" tfplan \
             --impersonate-service-account=${{ inputs.backend_service_account }}
           echo "Plan downloaded from gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}"
+          echo "#############"
+          echo "${{ inputs.component }}"
+          echo "#############"
 
       - name: Log Deployment Commenced
         run: |
@@ -77,7 +80,11 @@ jobs:
 
       - name: Terraform Apply
         working-directory: component/${{ inputs.component }}
-        run: terraform apply tfplan
+        run: |
+          terraform apply tfplan
+          echo "#############"
+          echo "${{ inputs.component }}"
+          echo "#############"
 
       - name: Log Deployment Deployed
         run: |
