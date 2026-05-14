@@ -66,12 +66,13 @@ jobs:
             LOCATION=${{ inputs.location }} \
             EXTRA_ARGS="${{ inputs.extra_args }}"
 
-      - name: Post Plan to PR
-        if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2.9.0
-        with:
-          header: plan-${{ inputs.component }}-${{ inputs.environment }}
-          path: component/${{ inputs.component }}/tfplan.txt
+      # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
+      # - name: Post Plan to PR
+      #   if: github.event_name == 'pull_request'
+      #   uses: marocchino/sticky-pull-request-comment@v2.9.0
+      #   with:
+      #     header: plan-${{ inputs.component }}-${{ inputs.environment }}
+      #     path: component/${{ inputs.component }}/tfplan.txt
 
       - name: Upload plan to GCS
         id: upload
