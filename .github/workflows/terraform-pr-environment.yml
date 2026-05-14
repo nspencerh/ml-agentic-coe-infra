@@ -78,6 +78,7 @@ jobs:
       # environment: pr-${{ github.event.number }}
       environment: discovery
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
+      tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
     secrets: inherit
 
