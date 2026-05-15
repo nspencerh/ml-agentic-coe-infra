@@ -50,7 +50,12 @@ jobs:
             exit 0
           fi
 
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+          else
+            # For workflow_dispatch, compare with the main branch
+            CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop...HEAD)
+          fi
 
           # Extract component names from component/{name}/ paths
           COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
@@ -75,7 +80,7 @@ jobs:
     needs: [detect]
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     uses: ./.github/workflows/terraform-plan.yml
     with:
       component: ${{ matrix.component }}
@@ -92,7 +97,7 @@ jobs:
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     with:
       component: ${{ matrix.component }}
       environment: discovery
@@ -109,7 +114,7 @@ jobs:
     if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     uses: ./.github/workflows/terraform-plan.yml
     with:
       component: ${{ matrix.component }}
@@ -126,7 +131,7 @@ jobs:
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     with:
       component: ${{ matrix.component }}
       environment: preprod
@@ -171,7 +176,7 @@ jobs:
     if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     uses: ./.github/workflows/terraform-plan.yml
     with:
       component: ${{ matrix.component }}
@@ -187,7 +192,7 @@ jobs:
     needs: [prod-plan]
     strategy:
       matrix:
-        component: ${{ fromJSON(needs.detect.outputs.components) }}
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     uses: ./.github/workflows/terraform-apply.yml
     with:
       component: ${{ matrix.component }}
