@@ -17,6 +17,10 @@ on:
       qualifier:
         required: true
         type: string
+      project_id:
+        required: true
+        type: string
+        description: "GCP project ID where the component is deployed"
       extra_args:
         required: false
         type: string
@@ -76,6 +80,7 @@ jobs:
             ENV=${{ inputs.environment }} \
             LOCATION=${{ inputs.location }} \
             QUALIFIER=${{ inputs.qualifier }} \
+            PROJECT_ID=${{ inputs.project_id }} \
             EXTRA_ARGS="${{ inputs.extra_args }}"
 
       # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
