@@ -6,7 +6,8 @@ on:
     paths:
       - 'component/**'
       - 'variables/**'
-    tags: 'v[\w]+/[0-9]{8}' # 
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
       component:
