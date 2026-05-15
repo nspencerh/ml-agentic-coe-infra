@@ -46,6 +46,9 @@ jobs:
             JSON=$(echo "${COMPONENT_NAMES}" | jq -R . | jq -s -c .)
             echo "components=${JSON}" >> "$GITHUB_OUTPUT"
           fi
+          echo "#############"
+          echo $GITHUB_OUTPUT
+          echo "#############"
 
   plan:
     needs: detect
