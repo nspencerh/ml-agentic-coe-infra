@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main-cicd-develop]
     paths:
       - 'component/**'
       - 'variables/**'
@@ -48,7 +48,7 @@ jobs:
             exit 0
           fi
 
-          CHANGED_FILES=$(git diff --name-only origin/main HEAD)
+          CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop HEAD)
 
           # Extract component names from component/{name}/ paths
           COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
@@ -98,7 +98,7 @@ jobs:
   preprod-plan:
     needs: [detect]
     # TODO - SemVer/CalVer?
-    if: github.ref == 'refs/heads/main' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
+    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components) }}
