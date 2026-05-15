@@ -74,9 +74,6 @@ jobs:
             JSON=$(echo "${COMPONENT_NAMES}" | jq -R . | jq -s -c .)
             echo "components=${JSON}" >> "$GITHUB_OUTPUT"
           fi
-          echo "###############"
-          echo $COMPONENT_NAMES
-          echo "###############"
 
   # --- Discovery ---
   discovery-plan:
@@ -96,7 +93,7 @@ jobs:
     secrets: inherit
 
   discovery-apply:
-    needs: [discovery-plan]
+    needs: [detect, discovery-plan]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
@@ -130,7 +127,7 @@ jobs:
     secrets: inherit
 
   preprod-apply:
-    needs: [preprod-plan]
+    needs: [detect, preprod-plan]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
@@ -192,7 +189,7 @@ jobs:
     secrets: inherit
 
   prod-apply:
-    needs: [prod-plan]
+    needs: [detect, prod-plan]
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
