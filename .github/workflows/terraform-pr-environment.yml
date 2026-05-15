@@ -47,9 +47,7 @@ jobs:
             echo "components=${JSON}" >> "$GITHUB_OUTPUT"
           fi
           echo "###############"
-          echo $CHANGED_FILES
           echo $COMPONENT_NAMES
-          echo $GITHUB_OUTPUT
           echo "###############"
 
   plan:
