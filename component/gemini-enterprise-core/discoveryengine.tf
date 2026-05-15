@@ -12,4 +12,5 @@
 #   time_zone             = var.gemini_app.time_zone
 #   company_name          = var.gemini_app.company_name
 # }
-
+#
+#
