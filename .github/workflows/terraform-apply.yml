@@ -13,16 +13,16 @@ on:
         required: true
         type: string
         description: "GCS path to the plan binary to apply"
-      service_account:
-        required: true
-        type: string
-        default: ""
-        description: "Service account to use for Terraform operations"
       tf_state_bucket:
         required: true
         type: string
         default: ""
         description: "GCS bucket for Terraform state"
+      service_account:
+        required: true
+        type: string
+        default: ""
+        description: "Service account to use for Terraform operations"
       backend_service_account:
         required: false
         type: string

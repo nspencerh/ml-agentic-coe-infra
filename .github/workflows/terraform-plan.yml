@@ -14,20 +14,23 @@ on:
         type: string
         default: "us"
         description: "Location used for terraform plan (used to infer global tfenv file, e.g. for components requiring data sovereignty)"
+      qualifier:
+        required: true
+        type: string
       extra_args:
         required: false
         type: string
         default: ""
         description: "Additional terraform plan arguments (e.g. -var flags for feature branches)"
+      tf_state_bucket:
+        required: true
+        type: string
+        description: "GCS bucket for storing Terraform state" 
       service_account:
         required: true
         type: string
         default: ""
         description: "Service account to use for Terraform operations"
-      tf_state_bucket:
-        required: true
-        type: string
-        description: "GCS bucket for storing Terraform state"
       backend_service_account:
         required: true
         type: string
@@ -72,6 +75,7 @@ jobs:
           make plan \
             ENV=${{ inputs.environment }} \
             LOCATION=${{ inputs.location }} \
+            QUALIFIER=${{ inputs.qualifier }} \
             EXTRA_ARGS="${{ inputs.extra_args }}"
 
       # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
