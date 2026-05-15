@@ -80,6 +80,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: discovery
       tfvars_file: env/discovery.tfvars
+      tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       service_account: ${{ vars.DS_GHA_SERVICE_ACCOUNT }}
     secrets: inherit
 
@@ -92,6 +93,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: discovery
+      tf_state_bucket: cicd-tfstate-tu-machinelearning-ds-1-ause1-ml-ds-pp-hub
       plan_gcs_path: ${{ needs.discovery-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
@@ -108,6 +110,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: preprod
       tfvars_file: env/preprod.tfvars
+      tf_state_bucket: cicd-tfstate-tu-agentspace-pp-2-ause1-ml-as-pp-hub
       service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     secrets: inherit
 
@@ -120,6 +123,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: preprod
+      tf_state_bucket: cicd-tfstate-tu-agentspace-pp-2-ause1-ml-as-pp-hub
       plan_gcs_path: ${{ needs.preprod-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
@@ -164,6 +168,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: production
       tfvars_file: env/prod.tfvars
+      tf_state_bucket: cicd-tfstate-tu-agentspace-pr-2-ause1-ml-as-pr-hub
       service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
     secrets: inherit
 
@@ -176,6 +181,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: production
+      tf_state_bucket: cicd-tfstate-tu-agentspace-pr-2-ause1-ml-as-pr-hub
       plan_gcs_path: ${{ needs.prod-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
