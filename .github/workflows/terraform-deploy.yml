@@ -50,14 +50,17 @@ jobs:
             exit 0
           fi
 
-          CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop HEAD)
-
-          # if [[ "${{ github.event_name }}" == "push" ]]; then
-          #   CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
-          # else
-          #   # For workflow_dispatch, compare with the main branch
-          #   CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop...HEAD)
-          # fi
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+              # New tag or branch
+              CHANGED_FILES=$(git diff --name-only "${{ github.sha }}"~1 "${{ github.sha }}")
+            else
+              CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}")
+            fi
+          else
+            # For workflow_dispatch, compare with the main branch
+            CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop...HEAD)
+          fi
 
           # Extract component names from component/{name}/ paths
           COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
@@ -114,7 +117,7 @@ jobs:
   preprod-us-plan:
     needs: [detect]
     # TODO - SemVer/CalVer?
-    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
+    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -177,7 +180,7 @@ jobs:
   # --- Prod US ---
   prod-us-plan:
     needs: [detect, preprod-us-eval]
-    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
+    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -272,7 +275,7 @@ jobs:
   preprod-au-plan:
     needs: [detect]
     # TODO - SemVer/CalVer?
-    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
+    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -335,7 +338,7 @@ jobs:
   # --- Prod AU ---
   prod-au-plan:
     needs: [detect, preprod-au-eval]
-    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
+    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
