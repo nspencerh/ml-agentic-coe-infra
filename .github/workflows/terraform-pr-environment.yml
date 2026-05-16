@@ -1,4 +1,4 @@
-name: PR Environment
+name: Ephemeral Environment
 
 on:
   pull_request:

@@ -85,6 +85,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: discovery
+      location: us
       qualifier: ${{ vars.DS_PP_QUALIFIER }}
       project_id: ${{ vars.DS_PP_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
@@ -101,14 +102,15 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: discovery
+      location: us
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       plan_gcs_path: ${{ needs.discovery-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
-  # --- Preprod ---
-  preprod-plan:
+  # --- Preprod US ---
+  preprod-us-plan:
     needs: [detect]
     # TODO - SemVer/CalVer?
     if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
@@ -119,6 +121,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: preprod
+      location: us
       qualifier: ${{ vars.US_PP_QUALIFIER }}
       project_id: ${{ vars.US_PP_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
@@ -126,8 +129,8 @@ jobs:
       backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
-  preprod-apply:
-    needs: [detect, preprod-plan]
+  preprod-us-apply:
+    needs: [detect, preprod-us-plan]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
@@ -135,14 +138,15 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: preprod
+      location: us
       tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.preprod-plan.outputs.plan_gcs_path }}
+      plan_gcs_path: ${{ needs.preprod-us-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
-  preprod-eval:
-    needs: [preprod-apply]
+  preprod-us-eval:
+    needs: [preprod-us-apply]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -170,9 +174,9 @@ jobs:
           echo "Logging failed eval to BigQuery"
           # bq-log-deployment.py log-event --status failed --component gemini --environment preprod --commit_sha ${{ github.sha }} --failure_reason "Preprod eval failed"
 
-  # --- Prod ---
-  prod-plan:
-    needs: [detect, preprod-eval]
+  # --- Prod US ---
+  prod-us-plan:
+    needs: [detect, preprod-us-eval]
     if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
     strategy:
       matrix:
@@ -181,6 +185,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: prod
+      location: us
       qualifier: ${{ vars.US_PR_QUALIFIER }}
       project_id: ${{ vars.US_PR_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
@@ -188,8 +193,8 @@ jobs:
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
-  prod-apply:
-    needs: [detect, prod-plan]
+  prod-us-apply:
+    needs: [detect, prod-us-plan]
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -197,14 +202,15 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: prod
+      location: us
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.prod-plan.outputs.plan_gcs_path }}
+      plan_gcs_path: ${{ needs.prod-us-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
-  post-prod-eval:
-    needs: [prod-apply]
+  post-prod-us-eval:
+    needs: [prod-us-apply]
     runs-on: ubuntu-latest
     outputs:
       eval_passed: ${{ steps.eval.outputs.passed }}
@@ -238,9 +244,9 @@ jobs:
           echo "Logging failed eval to BigQuery"
           # bq-log-deployment.py log-event --status failed --component gemini --environment prod --commit_sha ${{ github.sha }} --failure_reason "Prod eval failed"
 
-  rollback:
-    needs: post-prod-eval
-    if: needs.post-prod-eval.outputs.eval_passed == 'false'
+    rollback-prod-us:
+    needs: post-prod-us-eval
+    if: needs.post-prod-us-eval.outputs.eval_passed == 'false'
     runs-on: ubuntu-latest
     environment: prod
     steps:
@@ -252,6 +258,166 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Query last succeeded deployment
+        run: |
+          echo "Querying BigQuery for last succeeded deployment"
+          # bq-log-deployment.py query-last-success --component gemini --environment prod
+
+      - name: Rollback
+        run: |
+          echo "Rolling back to last successful deployment"
+          # Redeploy using package_uri or container_image from query result
+
+  # --- Preprod AU ---
+  preprod-au-plan:
+    needs: [detect]
+    # TODO - SemVer/CalVer?
+    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run preprod for main branch or version tags
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod
+      location: au
+      qualifier: ${{ vars.AU_PP_QUALIFIER }}
+      project_id: ${{ vars.AU_PP_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PP_PROJECT_ID }}-ause1-${{ vars.AU_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  preprod-au-apply:
+    needs: [detect, preprod-au-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod
+      location: au
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PP_PROJECT_ID }}-ause1-${{ vars.AU_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.preprod-au-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  preprod-au-eval:
+    needs: [preprod-au-apply]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run preprod evaluation
+        run: |
+          echo "Running preprod evaluation"
+          # agents-cli eval --environment preprod
+
+      - name: Log Deployment Succeeded
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment preprod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment preprod --commit_sha ${{ github.sha }} --failure_reason "Preprod eval failed"
+
+  # --- Prod AU ---
+  prod-au-plan:
+    needs: [detect, preprod-au-eval]
+    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*' # Only run production for version tags
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      location: au
+      qualifier: ${{ vars.AU_PR_QUALIFIER }}
+      project_id: ${{ vars.AU_PR_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  prod-au-apply:
+    needs: [detect, prod-au-plan]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      location: au
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.prod-au-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  post-prod-au-eval:
+    needs: [prod-au-apply]
+    runs-on: ubuntu-latest
+    outputs:
+      eval_passed: ${{ steps.eval.outputs.passed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run post-production eval
+        id: eval
+        run: |
+          echo "Running post-production evaluation"
+          # result=$(agents-cli eval --environment prod)
+          # echo "passed=$result" >> "$GITHUB_OUTPUT"
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log Deployment Succeeded
+        if: steps.eval.outputs.passed == 'true'
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment prod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: steps.eval.outputs.passed == 'false' || failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment prod --commit_sha ${{ github.sha }} --failure_reason "Prod eval failed"
+
+  rollback-prod-au:
+    needs: post-prod-au-eval
+    if: needs.post-prod-au-eval.outputs.eval_passed == 'false'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Query last succeeded deployment
         run: |

@@ -9,6 +9,11 @@ on:
       environment:
         required: true
         type: string
+      location:
+        required: false
+        type: string
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. for components requiring data sovereignty)"
       plan_gcs_path:
         required: true
         type: string
@@ -40,6 +45,7 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    location: ${{ inputs.location }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
