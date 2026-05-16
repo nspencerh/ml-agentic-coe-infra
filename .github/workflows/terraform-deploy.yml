@@ -244,7 +244,7 @@ jobs:
           echo "Logging failed eval to BigQuery"
           # bq-log-deployment.py log-event --status failed --component gemini --environment prod --commit_sha ${{ github.sha }} --failure_reason "Prod eval failed"
 
-    rollback-prod-us:
+  rollback-prod-us:
     needs: post-prod-us-eval
     if: needs.post-prod-us-eval.outputs.eval_passed == 'false'
     runs-on: ubuntu-latest
