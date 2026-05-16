@@ -83,6 +83,7 @@ jobs:
   # --- Discovery ---
   discovery-plan:
     needs: [detect]
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -116,8 +117,7 @@ jobs:
   # --- Preprod US ---
   preprod-us-plan:
     needs: [detect]
-    # TODO - SemVer/CalVer?
-    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -180,7 +180,7 @@ jobs:
   # --- Prod US ---
   prod-us-plan:
     needs: [detect, preprod-us-eval]
-    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
+    if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -273,9 +273,8 @@ jobs:
 
   # --- Preprod AU ---
   preprod-au-plan:
-    needs: [detect]
-    # TODO - SemVer/CalVer?
-    if: github.ref == 'refs/heads/main-cicd-develop' || github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
+    needs: [detect, discovery-apply]
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -338,7 +337,7 @@ jobs:
   # --- Prod AU ---
   prod-au-plan:
     needs: [detect, preprod-au-eval]
-    if: github.ref_type == 'tag' && github.ref == 'refs/tags/v*'
+    if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
