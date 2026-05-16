@@ -88,7 +88,7 @@ jobs:
       qualifier: ${{ vars.DS_PP_QUALIFIER }}
       project_id: ${{ vars.DS_PP_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
@@ -102,7 +102,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: discovery
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       plan_gcs_path: ${{ needs.discovery-plan.outputs.plan_gcs_path }}
     secrets: inherit
@@ -122,7 +122,7 @@ jobs:
       qualifier: ${{ vars.US_PP_QUALIFIER }}
       project_id: ${{ vars.US_PP_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
@@ -136,7 +136,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: preprod
       tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
       plan_gcs_path: ${{ needs.preprod-plan.outputs.plan_gcs_path }}
     secrets: inherit
@@ -152,7 +152,7 @@ jobs:
         uses: google-github-actions/auth@v2.1.8
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+          service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Run preprod evaluation
         run: |
@@ -184,7 +184,7 @@ jobs:
       qualifier: ${{ vars.US_PR_QUALIFIER }}
       project_id: ${{ vars.US_PR_PROJECT_ID }}
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
@@ -198,7 +198,7 @@ jobs:
       component: ${{ matrix.component }}
       environment: prod
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
-      service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       plan_gcs_path: ${{ needs.prod-plan.outputs.plan_gcs_path }}
     secrets: inherit
@@ -216,7 +216,7 @@ jobs:
         uses: google-github-actions/auth@v2.1.8
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.TERRAFORM_SERVICE_ACCOUNT }}
+          service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Run post-production eval
         id: eval

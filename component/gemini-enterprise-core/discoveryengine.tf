@@ -13,4 +13,3 @@
 #   company_name          = var.gemini_app.company_name
 # }
 #
-#

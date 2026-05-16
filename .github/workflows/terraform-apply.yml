@@ -18,7 +18,7 @@ on:
         type: string
         default: ""
         description: "GCS bucket for Terraform state"
-      service_account:
+      gha_service_account:
         required: true
         type: string
         default: ""
@@ -27,7 +27,7 @@ on:
         required: false
         type: string
         default: ""        
-        description: "Service account to use for Terraform backend operations (if different from service_account)"
+        description: "Service account to use for Terraform backend operations"
 
 permissions:
   contents: read
@@ -48,7 +48,7 @@ jobs:
         uses: google-github-actions/auth@v2.1.8
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ inputs.service_account }}
+          service_account: ${{ inputs.gha_service_account }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3.1.2
