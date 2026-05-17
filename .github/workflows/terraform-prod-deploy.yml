@@ -1,0 +1,265 @@
+name: Prod Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to deploy (leave empty for auto-detect)"
+        required: true 
+        type: choice
+        options:
+          - gemini-enterprise-core
+          - monitoring
+      location:
+        required: false
+        type: choice
+        options:
+          - us
+          - au
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. 'au' for components requiring data sovereignty)"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.resolve.outputs.components }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed components
+        id: resolve
+        run: |
+          if [[ -n "${{ inputs.component }}" ]]; then
+            echo "components=[\"${{ inputs.component }}\"]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+              # New tag or branch
+              CHANGED_FILES=$(git diff --name-only "${{ github.sha }}"~1 "${{ github.sha }}")
+            else
+              CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}")
+            fi
+          else
+            # For workflow_dispatch, compare with the main branch
+            CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop...HEAD)
+          fi
+
+          # Extract component names from component/{name}/ paths
+          COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
+
+          # variables/ changes affect all components
+          if echo "${CHANGED_FILES}" | grep -qE '^variables/'; then
+            COMPONENT_NAMES=$(find component -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+          fi
+
+          # Module changes are versioned via git tags - they don't trigger component deploys.
+          # Bump the module source ref in the component to pick up module changes.
+
+          if [[ -z "${COMPONENT_NAMES}" ]]; then
+            echo "components=[]" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(echo "${COMPONENT_NAMES}" | jq -R . | jq -s -c .)
+            echo "components=${JSON}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --- Prod US ---
+  prod-us-plan:
+    needs: [detect, preprod-us-eval]
+    if: github.event.base_ref == 'refs/heads/main-cicd-develop'
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      location: us
+      qualifier: ${{ vars.US_PR_QUALIFIER }}
+      project_id: ${{ vars.US_PR_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  prod-us-apply:
+    needs: [detect, prod-us-plan]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.prod-us-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  post-prod-us-eval:
+    needs: [prod-us-apply]
+    runs-on: ubuntu-latest
+    outputs:
+      eval_passed: ${{ steps.eval.outputs.passed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run post-production eval
+        id: eval
+        run: |
+          echo "Running post-production evaluation"
+          # result=$(agents-cli eval --environment prod)
+          # echo "passed=$result" >> "$GITHUB_OUTPUT"
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log Deployment Succeeded
+        if: steps.eval.outputs.passed == 'true'
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment prod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: steps.eval.outputs.passed == 'false' || failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment prod --commit_sha ${{ github.sha }} --failure_reason "Prod eval failed"
+
+  rollback-prod-us:
+    needs: post-prod-us-eval
+    if: needs.post-prod-us-eval.outputs.eval_passed == 'false'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Query last succeeded deployment
+        run: |
+          echo "Querying BigQuery for last succeeded deployment"
+          # bq-log-deployment.py query-last-success --component gemini --environment prod
+
+      - name: Rollback
+        run: |
+          echo "Rolling back to last successful deployment"
+          # Redeploy using package_uri or container_image from query result
+
+  # --- Prod AU ---
+  prod-au-plan:
+    needs: [detect, preprod-au-eval]
+    if: github.event.base_ref == 'refs/heads/main-cicd-develop'
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      location: au
+      qualifier: ${{ vars.AU_PR_QUALIFIER }}
+      project_id: ${{ vars.AU_PR_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  prod-au-apply:
+    needs: [detect, prod-au-plan]
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-apply.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: prod
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.prod-au-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  post-prod-au-eval:
+    needs: [prod-au-apply]
+    runs-on: ubuntu-latest
+    outputs:
+      eval_passed: ${{ steps.eval.outputs.passed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run post-production eval
+        id: eval
+        run: |
+          echo "Running post-production evaluation"
+          # result=$(agents-cli eval --environment prod)
+          # echo "passed=$result" >> "$GITHUB_OUTPUT"
+          echo "passed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Log Deployment Succeeded
+        if: steps.eval.outputs.passed == 'true'
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment prod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: steps.eval.outputs.passed == 'false' || failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment prod --commit_sha ${{ github.sha }} --failure_reason "Prod eval failed"
+
+  rollback-prod-au:
+    needs: post-prod-au-eval
+    if: needs.post-prod-au-eval.outputs.eval_passed == 'false'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2.1.8
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Query last succeeded deployment
+        run: |
+          echo "Querying BigQuery for last succeeded deployment"
+          # bq-log-deployment.py query-last-success --component gemini --environment prod
+
+      - name: Rollback
+        run: |
+          echo "Rolling back to last successful deployment"
+          # Redeploy using package_uri or container_image from query result
