@@ -114,7 +114,7 @@ jobs:
 
   # --- Preprod US ---
   preprod-us-plan:
-    needs: [detect]
+    needs: [detect, discovery-apply]
     if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
