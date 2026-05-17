@@ -79,7 +79,7 @@ jobs:
   # --- Prod US ---
   prod-us-plan:
     needs: [detect]
-    if: github.event.base_ref == 'refs/heads/main-cicd-develop'
+    if: startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -173,7 +173,7 @@ jobs:
   # --- Prod AU ---
   prod-au-plan:
     needs: [detect]
-    if: github.event.base_ref == 'refs/heads/main-cicd-develop'
+    if: startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
