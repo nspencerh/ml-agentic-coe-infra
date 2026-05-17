@@ -98,7 +98,6 @@ jobs:
   prod-us-apply:
     needs: [detect, prod-us-plan]
     uses: ./.github/workflows/terraform-apply.yml
-    environment: prod
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -193,7 +192,6 @@ jobs:
   prod-au-apply:
     needs: [detect, prod-au-plan]
     uses: ./.github/workflows/terraform-apply.yml
-    environment: prod
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
