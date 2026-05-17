@@ -134,6 +134,7 @@ jobs:
   preprod-us-apply:
     needs: [detect, preprod-us-plan]
     uses: ./.github/workflows/terraform-apply.yml
+    environment: preprod
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -197,6 +198,7 @@ jobs:
   preprod-au-apply:
     needs: [detect, preprod-au-plan]
     uses: ./.github/workflows/terraform-apply.yml
+    environment: preprod
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
