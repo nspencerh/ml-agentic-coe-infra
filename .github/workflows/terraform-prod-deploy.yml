@@ -78,7 +78,7 @@ jobs:
 
   # --- Prod US ---
   prod-us-plan:
-    needs: [detect, preprod-us-eval]
+    needs: [detect]
     if: github.event.base_ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
@@ -172,7 +172,7 @@ jobs:
 
   # --- Prod AU ---
   prod-au-plan:
-    needs: [detect, preprod-au-eval]
+    needs: [detect]
     if: github.event.base_ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
