@@ -1,3 +1,6 @@
+# Terraform files to ignore
 .terraform
 .terraform.lock.hcl
 tfplan*
+# OS generated files to ignore
+.DS_Store
