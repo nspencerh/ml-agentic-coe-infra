@@ -18,7 +18,7 @@ BACKEND_PREFIX := tfstate/$(COMPONENT)
 
 TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
 	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
-	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/${ENV}.tfvars
+	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/${ENV}.tfvars
 
 ifdef TARGET
 	TARGET := -target $(TARGET)
