@@ -86,7 +86,7 @@ jobs:
     uses: ./.github/workflows/terraform-plan.yml
     with:
       component: ${{ matrix.component }}
-      environment: prod
+      environment: prod-us
       location: us
       qualifier: ${{ vars.US_PR_QUALIFIER }}
       project_id: ${{ vars.US_PR_PROJECT_ID }}
@@ -103,7 +103,7 @@ jobs:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     with:
       component: ${{ matrix.component }}
-      environment: prod
+      environment: prod-us
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
@@ -149,7 +149,7 @@ jobs:
     needs: post-prod-us-eval
     if: needs.post-prod-us-eval.outputs.eval_passed == 'false'
     runs-on: ubuntu-latest
-    environment: prod
+    environment: prod-us
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -180,7 +180,7 @@ jobs:
     uses: ./.github/workflows/terraform-plan.yml
     with:
       component: ${{ matrix.component }}
-      environment: prod
+      environment: prod-au
       location: au
       qualifier: ${{ vars.AU_PR_QUALIFIER }}
       project_id: ${{ vars.AU_PR_PROJECT_ID }}
@@ -197,7 +197,7 @@ jobs:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
     with:
       component: ${{ matrix.component }}
-      environment: prod
+      environment: prod-au
       tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
@@ -243,7 +243,7 @@ jobs:
     needs: post-prod-au-eval
     if: needs.post-prod-au-eval.outputs.eval_passed == 'false'
     runs-on: ubuntu-latest
-    environment: prod
+    environment: prod-au
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
