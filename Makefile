@@ -3,6 +3,8 @@ ifndef $(COMPONENT)
 endif
 
 ENV?=discovery
+VALID_ENVS := discovery preprod-au preprod-us prod-au prod-us
+SAFE_ENV := $(if $(filter $(ENV),$(VALID_ENVS)),$(ENV),discovery)
 LOCATION?=us
 QUALIFIER?=ml-ds-pp-hub
 PROJECT_ID?=tu-machinelearning-ds-1
@@ -17,8 +19,8 @@ BACKEND_BUCKET := cicd-tfstate-$(PROJECT_ID)-ause1-$(QUALIFIER)
 BACKEND_PREFIX := tfstate/$(COMPONENT)
 
 TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
-	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
-	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/${ENV}.tfvars
+	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(SAFE_ENV).tfvars \
+	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/${SAFE_ENV}.tfvars
 
 ifdef TARGET
 	TARGET := -target $(TARGET)
