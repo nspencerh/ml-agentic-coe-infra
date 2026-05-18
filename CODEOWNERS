@@ -1,0 +1,6 @@
+# Default owners for everything in the repository
+# Examples:
+# /src/              @transurban/security-managers
+# *.tf               @transurban/terraform-admins
+# /docs/             @transurban/tech-writers
+*  @transurban/mlops
