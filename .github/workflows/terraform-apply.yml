@@ -51,7 +51,7 @@ jobs:
           service_account: ${{ inputs.gha_service_account }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3.1.2
+        uses: hashicorp/setup-terraformb9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: ${{ env.TF_VERSION }}
 

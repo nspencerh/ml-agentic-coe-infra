@@ -104,7 +104,7 @@ jobs:
           service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3.1.2
+        uses: hashicorp/setup-terraformb9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
