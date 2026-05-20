@@ -10,6 +10,7 @@ resource "google_bigquery_dataset" "deployments" {
   }
 }
 
+#
 # resource "google_bigquery_table" "deployment_events" {
 #   dataset_id          = google_bigquery_dataset.deployments.dataset_id
 #   table_id            = "deployment_events"
