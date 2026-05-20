@@ -2,7 +2,7 @@ name: Ephemeral Environment
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main-cicd-develop]
     types: [opened, synchronize, closed]
     paths:
       - 'component/**'
@@ -30,7 +30,7 @@ jobs:
       - name: Detect changed components
         id: resolve
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/main HEAD)
+          CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop HEAD)
 
           # Extract component names from component/{name}/ paths
           COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
