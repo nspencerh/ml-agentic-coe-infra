@@ -31,6 +31,10 @@ jobs:
         id: resolve
         run: |
           CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "############################"
+          echo "${{ github.event.before }}"
+          echo "${{ github.sha }}"
+          echo "############################"
 
           # Extract component names from component/{name}/ paths
           COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
