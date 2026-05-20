@@ -34,6 +34,7 @@ jobs:
           echo "############################"
           echo "${{ github.event.before }}"
           echo "${{ github.sha }}"
+          echo "${CHANGED_FILES}"
           echo "############################"
 
           # Extract component names from component/{name}/ paths
