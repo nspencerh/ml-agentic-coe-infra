@@ -73,4 +73,3 @@ resource "google_bigquery_dataset" "deployments" {
 
 #   depends_on = [google_bigquery_table.deployment_events]
 # }
-#
