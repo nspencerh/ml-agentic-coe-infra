@@ -1,0 +1,92 @@
+name: Terraform Apply
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      plan_gcs_path:
+        required: true
+        type: string
+        description: "GCS path to the plan binary to apply"
+      tf_state_bucket:
+        required: true
+        type: string
+        default: ""
+        description: "GCS bucket for Terraform state"
+      gha_service_account:
+        required: true
+        type: string
+        default: ""
+        description: "Service account to use for Terraform operations"
+      backend_service_account:
+        required: false
+        type: string
+        default: ""        
+        description: "Service account to use for Terraform backend operations"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ inputs.gha_service_account }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: component/${{ inputs.component }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ inputs.tf_state_bucket }}" \
+            -backend-config="prefix=tfstate/${{ inputs.component }}" \
+            -backend-config=impersonate_service_account=${{ inputs.backend_service_account }}
+          terraform workspace select ${{ inputs.environment }}
+
+      - name: Download plan from GCS
+        working-directory: component/${{ inputs.component }}
+        run: |
+          gcloud storage cp "gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}" tfplan \
+            --impersonate-service-account=${{ inputs.backend_service_account }}
+          echo "Plan downloaded from gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}"
+
+      - name: Log Deployment Commenced
+        run: |
+          echo "Logging commenced to BigQuery"
+          # bq-log-deployment.py log-event --status commenced --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }}
+
+      - name: Terraform Apply
+        working-directory: component/${{ inputs.component }}
+        run: terraform apply tfplan
+
+      - name: Log Deployment Deployed
+        run: |
+          echo "Logging deployed to BigQuery"
+          # bq-log-deployment.py log-event --status deployed --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed apply to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component ${{ inputs.component }} --environment ${{ inputs.environment }} --commit_sha ${{ github.sha }} --failure_reason "Terraform apply failed"

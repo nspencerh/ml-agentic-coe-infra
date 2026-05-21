@@ -1,0 +1,103 @@
+name: Terraform Plan
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      location:
+        required: false
+        type: string
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. for components requiring data sovereignty)"
+      qualifier:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+        description: "GCP project ID where the component is deployed"
+      extra_args:
+        required: false
+        type: string
+        default: ""
+        description: "Additional terraform plan arguments (e.g. -var flags for feature branches)"
+      tf_state_bucket:
+        required: true
+        type: string
+        description: "GCS bucket for storing Terraform state" 
+      gha_service_account:
+        required: true
+        type: string
+        default: ""
+        description: "Service account to use for Terraform operations"
+      backend_service_account:
+        required: true
+        type: string
+        description: "Service account to use for Terraform backend operations"
+    outputs:
+      plan_gcs_path:
+        description: "GCS path where the plan binary was uploaded"
+        value: ${{ jobs.plan.outputs.plan_gcs_path }}
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+env:
+  TF_VERSION: "1.9.8"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      plan_gcs_path: ${{ steps.upload.outputs.gcs_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ inputs.gha_service_account }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: component/${{ inputs.component }}
+        run: |
+          make plan \
+            ENV=${{ inputs.environment }} \
+            LOCATION=${{ inputs.location }} \
+            QUALIFIER=${{ inputs.qualifier }} \
+            PROJECT_ID=${{ inputs.project_id }} \
+            EXTRA_ARGS="${{ inputs.extra_args }}"
+
+      # NOTE: removing temporarily as the action marocchino/sticky-pull-request-comment@v2.9.0 is not allowed in transurban/ml-agentic-coe-infra because all actions must be from a repository owned by TU enterprise
+      # - name: Post Plan to PR
+      #   if: github.event_name == 'pull_request'
+      #   uses: marocchino/sticky-pull-request-comment@v2.9.0
+      #   with:
+      #     header: plan-${{ inputs.component }}-${{ inputs.environment }}
+      #     path: component/${{ inputs.component }}/tfplan.txt
+
+      - name: Upload plan to GCS
+        id: upload
+        working-directory: component/${{ inputs.component }}
+        run: |
+          terraform show -json tfplan
+          PLAN_PATH="plans/${{ inputs.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
+          gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \
+            --impersonate-service-account=${{ inputs.backend_service_account }}
+          echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
+          echo "Plan uploaded to gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}"
