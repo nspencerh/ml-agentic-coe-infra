@@ -74,7 +74,7 @@ jobs:
       environment: pr-${{ github.event.number }}
       qualifier: ${{ vars.DS_PP_QUALIFIER }}
       project_id: ${{ vars.DS_PP_PROJECT_ID }}
-      extra_args: '-var="environment_suffix=pr-${{ github.event.number }}"'
+      extra_args: '-var="ephemeral_suffix=pr-${{ github.event.number }}"'
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
@@ -139,6 +139,7 @@ jobs:
             -var="deploy_service_account=${{ env.deploy_service_account }}" \
             -var-file="../../variables/env/us/default.tfvars" \
             -var-file="../../variables/env/us/discovery.tfvars" \
-            -var-file="env/us/discovery.tfvars" 
+            -var-file="env/us/discovery.tfvars" \
+            -var="ephemeral_suffix=pr-${{ github.event.number }}"
         # -var="environment=pr-${{ github.event.number }}" \
-        # -var="environment_suffix=pr-${{ github.event.number }}"
+  

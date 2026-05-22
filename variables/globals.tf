@@ -19,7 +19,7 @@ variable "environment" {
   description = "The environment name"
 }
 
-variable "environment_suffix" {
+variable "ephemeral_suffix" {
   type        = string
   default     = null
   description = "Optional suffix for resource IDs (used by feature branch deployments to avoid collisions). Leave empty for preprod/prod."

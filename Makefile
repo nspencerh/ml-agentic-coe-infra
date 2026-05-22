@@ -58,6 +58,7 @@ plan: init validate workspace
 	terraform plan -no-color \
 		-lock=false \
 		-var="deploy_service_account=$(DEPLOY_SERVICE_ACCOUNT)" \
+		$(EXTRA_ARGS) \
 		$(TFVARS) $(TARGET) \
 		-out $(PLAN)
 	terraform show -no-color $(PLAN) > $(PLAN_TEXT)
