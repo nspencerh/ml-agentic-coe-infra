@@ -9,11 +9,6 @@ variable "region" {
   default     = "us"
 }
 
-# variable "build_project_id" {
-#   type        = string
-#   description = "The GCP project ID used for build and CI/CD artifacts"
-# }
-
 variable "environment" {
   type        = string
   description = "The environment name"

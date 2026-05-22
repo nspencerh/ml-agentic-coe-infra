@@ -28,21 +28,15 @@ variable "reasoning_engines" {
   default = {}
 }
 
-variable "ephemeral_suffix" {
-  type        = string
-  description = "Optional ephemeral suffix to append to resource names for non-blocking development environments (e.g. dev/test)"
-  default     = null
-}
-
 variable "registry_bucket" {
   description = "Name of the GCS bucket for writing the Reasoning Engine registry JSON blob (e.g. my-bucket - no gs:// prefix)"
   type        = string
 }
 
-check "ephemeral_suffix_only_in_dev" {
+check "ephemeral_suffix_only_in_discovery" {
   assert {
-    condition     = var.environment == "dev" || var.ephemeral_suffix == null
-    error_message = "The 'ephemeral_suffix' variable can only be set when the environment is 'dev'."
+    condition     = var.environment == "discovery" || var.ephemeral_suffix == null
+    error_message = "The 'ephemeral_suffix' variable can only be set when the environment is 'discovery'."
   }
 }
 
