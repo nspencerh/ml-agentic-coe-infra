@@ -3,8 +3,7 @@ ifndef $(COMPONENT)
 endif
 
 ENV?=discovery
-VALID_ENVS := discovery preprod-au preprod-us prod-au prod-us
-SAFE_ENV := $(if $(filter $(ENV),$(VALID_ENVS)),$(ENV),discovery)
+PREPROD_PROD_ENVS := preprod-au preprod-us prod-au prod-us
 LOCATION?=us
 QUALIFIER?=ml-ds-pp-hub
 PROJECT_ID?=tu-machinelearning-ds-1
@@ -18,13 +17,13 @@ GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 BACKEND_BUCKET := cicd-tfstate-$(PROJECT_ID)-ause1-$(QUALIFIER)
 BACKEND_PREFIX := tfstate/$(COMPONENT)
 
-ifeq ($(SAFE_ENV),discovery)
+ifeq ($(filter $(ENV),$(PREPROD_PROD_ENVS)),)
 	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/discovery.tfvars \
 		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/discovery.tfvars
 else
 	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
-		-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(SAFE_ENV).tfvars \
-		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/$(SAFE_ENV).tfvars
+		-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
+		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/$(ENV).tfvars
 endif
 
 ifdef TARGET
@@ -57,9 +56,9 @@ init:
 		-reconfigure
 
 workspace:
-	@terraform workspace list | grep -qE '^[* ] $(SAFE_ENV)$$' && \
-		terraform workspace select $(SAFE_ENV) || \
-		terraform workspace new $(SAFE_ENV)
+	@terraform workspace list | grep -qE '^[* ] $(ENV)$$' && \
+		terraform workspace select $(ENV) || \
+		terraform workspace new $(ENV)
 
 plan: init validate workspace
 	terraform plan -no-color \
