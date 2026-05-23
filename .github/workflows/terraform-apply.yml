@@ -9,6 +9,9 @@ on:
       environment:
         required: true
         type: string
+      github_environment:
+        required: false
+        type: string
       plan_gcs_path:
         required: true
         type: string
@@ -39,7 +42,7 @@ env:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.github_environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
