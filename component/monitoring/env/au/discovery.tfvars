@@ -1,1 +1,0 @@
-location = "australia-southeast2"

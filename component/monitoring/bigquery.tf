@@ -1,14 +1,14 @@
-# resource "google_bigquery_dataset" "deployments" {
-#   dataset_id = var.ephemeral_suffix != null ? "agent_platform_deployments_${var.ephemeral_suffix}" : "agent_platform_deployments"
-#   location   = var.location
+resource "google_bigquery_dataset" "deployments" {
+  dataset_id = var.ephemeral_suffix != null ? "agent_platform_deployments_${var.ephemeral_suffix}" : "agent_platform_deployments"
+  location   = var.location
 
-#   description = "Deployment event tracking for Gemini Enterprise agents."
+  description = "Deployment event tracking for Gemini Enterprise agents."
 
-#   labels = {
-#     environment = var.environment
-#     managed_by  = "terraform"
-#   }
-# }
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
 
 # resource "google_bigquery_table" "deployment_events" {
 #   dataset_id          = google_bigquery_dataset.deployments.dataset_id

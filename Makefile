@@ -18,9 +18,14 @@ GLOBAL_PATH := $(shell git rev-parse --show-toplevel)
 BACKEND_BUCKET := cicd-tfstate-$(PROJECT_ID)-ause1-$(QUALIFIER)
 BACKEND_PREFIX := tfstate/$(COMPONENT)
 
-TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
-	-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(SAFE_ENV).tfvars \
-	-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/${SAFE_ENV}.tfvars
+ifeq ($(SAFE_ENV),discovery)
+	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/discovery.tfvars \
+		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/discovery.tfvars
+else
+	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
+		-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(SAFE_ENV).tfvars \
+		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/$(SAFE_ENV).tfvars
+endif
 
 ifdef TARGET
 	TARGET := -target $(TARGET)
