@@ -58,7 +58,6 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.github_environment }}
     outputs:
       plan_gcs_path: ${{ steps.upload.outputs.gcs_path }}
     steps:
