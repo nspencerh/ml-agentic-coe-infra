@@ -104,6 +104,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: prod-us
+      github_environment: prod-us
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
@@ -198,6 +199,7 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: prod-au
+      github_environment: prod-au
       tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com

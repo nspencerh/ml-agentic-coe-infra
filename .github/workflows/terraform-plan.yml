@@ -9,9 +9,6 @@ on:
       environment:
         required: true
         type: string
-      github_environment:
-        required: false
-        type: string
       location:
         required: false
         type: string

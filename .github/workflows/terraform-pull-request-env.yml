@@ -72,7 +72,6 @@ jobs:
     with:
       component: ${{ matrix.component }}
       environment: pr-${{ github.event.number }}
-      github_environment: ephemeral
       qualifier: ${{ vars.DS_PP_QUALIFIER }}
       project_id: ${{ vars.DS_PP_PROJECT_ID }}
       extra_args: '-var="ephemeral_suffix=pr_${{ github.event.number }}"'
