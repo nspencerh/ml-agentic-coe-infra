@@ -63,6 +63,7 @@ plan: init validate workspace
 	terraform plan -no-color \
 		-lock=false \
 		-var="deploy_service_account=$(DEPLOY_SERVICE_ACCOUNT)" \
+		-var="environment=$(ENV)" \
 		$(EXTRA_ARGS) \
 		$(TFVARS) $(TARGET) \
 		-out $(PLAN)
