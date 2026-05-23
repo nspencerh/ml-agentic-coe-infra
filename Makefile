@@ -21,8 +21,7 @@ ifeq ($(filter $(ENV),$(PREPROD_PROD_ENVS)),)
 	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/discovery.tfvars \
 		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/discovery.tfvars
 else
-	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/default.tfvars \
-		-var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
+	TFVARS := -var-file=$(GLOBAL_PATH)/variables/env/$(LOCATION)/$(ENV).tfvars \
 		-var-file=$(GLOBAL_PATH)/component/$(COMPONENT)/env/$(LOCATION)/$(ENV).tfvars
 endif
 
