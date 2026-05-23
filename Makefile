@@ -57,7 +57,9 @@ init:
 		-reconfigure
 
 workspace:
-	terraform workspace select $(ENV) || terraform workspace new $(ENV)
+	@terraform workspace list | grep -qE '^[* ] $(SAFE_ENV)$$' && \
+		terraform workspace select $(SAFE_ENV) || \
+		terraform workspace new $(SAFE_ENV)
 
 plan: init validate workspace
 	terraform plan -no-color \
