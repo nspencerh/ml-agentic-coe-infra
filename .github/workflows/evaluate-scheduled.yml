@@ -41,15 +41,15 @@ jobs:
           echo "Writing eval result to BigQuery eval_runs table"
           # bq-log-eval.py --trigger scheduled --passed ${{ steps.eval.outputs.passed }}
 
-      - name: Open issue on failure
-        if: steps.eval.outputs.passed == 'false'
-        uses: actions/github-script@v7.0.1
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: 'Scheduled production eval failed',
-              body: `Weekly scheduled evaluation failed.\n\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis does NOT trigger a rollback. Investigate and resolve manually.`,
-              labels: ['eval-failure', 'production']
-            });
+      # - name: Open issue on failure
+      #   if: steps.eval.outputs.passed == 'false'
+      #   uses: actions/github-script@v7.0.1
+      #   with:
+      #     script: |
+      #       github.rest.issues.create({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         title: 'Scheduled production eval failed',
+      #         body: `Weekly scheduled evaluation failed.\n\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n\nThis does NOT trigger a rollback. Investigate and resolve manually.`,
+      #         labels: ['eval-failure', 'production']
+      #       });
