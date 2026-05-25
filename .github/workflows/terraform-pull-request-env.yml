@@ -141,4 +141,10 @@ jobs:
             -var-file="../../variables/env/discovery.tfvars" \
             -var-file="env/discovery.tfvars" \
             -var="ephemeral_suffix=pr_${{ github.event.number }}" \
-            -var="environment=pr_${{ github.event.number }}" 
+            -var="environment=pr_${{ github.event.number }}"
+
+      - name: Delete Terraform Workspace
+        working-directory: component/${{ matrix.component }}
+        run: |
+          terraform workspace select default
+          terraform workspace delete -force ${{ env.environment }}
