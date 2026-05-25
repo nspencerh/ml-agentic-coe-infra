@@ -124,7 +124,7 @@ jobs:
         uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+          service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
 
       - name: Run post-production eval
         id: eval
