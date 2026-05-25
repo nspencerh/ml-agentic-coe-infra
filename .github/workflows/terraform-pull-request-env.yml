@@ -142,4 +142,3 @@ jobs:
             -var-file="env/discovery.tfvars" \
             -var="ephemeral_suffix=pr_${{ github.event.number }}" \
             -var="environment=pr_${{ github.event.number }}" 
-  
