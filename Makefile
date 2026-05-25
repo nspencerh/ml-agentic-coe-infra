@@ -70,7 +70,7 @@ plan: init validate workspace
 	terraform show -no-color $(PLAN) > $(PLAN_TEXT)
 	terraform show -json $(PLAN) > $(PLAN_JSON)
 
- apply: workspace
+apply: workspace
 	terraform apply \
  		-auto-approve \
 		$(PLAN)
