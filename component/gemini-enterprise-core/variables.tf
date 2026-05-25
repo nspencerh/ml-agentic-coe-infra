@@ -33,13 +33,6 @@ variable "registry_bucket" {
   type        = string
 }
 
-check "ephemeral_suffix_only_in_discovery" {
-  assert {
-    condition     = var.environment == "discovery" || var.ephemeral_suffix == null
-    error_message = "The 'ephemeral_suffix' variable can only be set when the environment is 'discovery'."
-  }
-}
-
 variable "deploy_service_account" {
   type        = string
   description = "Service account for deploying resources."
