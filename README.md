@@ -1,72 +1,68 @@
-# ml-template-repo
+# Gemini Enterprise Foundations
 
-This is a base template repository that can be used to clone and create other machine learning and AI engineering projects.
+This repository contains the foundational Terraform infrastructure for deploying Gemini Enterprise solutions on Google Cloud Platform. It provisions [Discovery Engine](https://cloud.google.com/generative-ai-app-builder/docs/introduction) apps and [Vertex AI Agent Platform (Reasoning Engine)](https://cloud.google.com/vertex-ai/docs/agent-builder/introduction) shells.
 
-## Features & Setup
+This repository is designed to be used in tandem with a separate `gemini-agents` monorepo, which handles agent code deployment and registration. The two repositories are decoupled via a GCS outputs blob that this repository writes after each apply.
 
-This template is pre-configured with modern Python tooling and CI/CD practices:
+## Architecture
 
-- **Dependency Management:** Uses [`uv`](https://github.com/astral-sh/uv) for fast and reliable dependency resolution.
-- **Build System:** Configured with `hatchling` via `pyproject.toml`.
-- **Linting & Formatting:** Uses [`ruff`](https://github.com/astral-sh/ruff), replacing older tools like flake8 and black.
-- **Type Checking:** Uses Astral's new blazingly fast type checker [`ty`](https://github.com/astral-sh/ty).
-- **Testing:** Pre-configured with `pytest`.
-- **Pre-commit Hooks:** Included `.pre-commit-config.yaml` to ensure code quality before commits.
-- **Security:** Integrated `bandit` (SAST) and `pip-audit` (dependency vulnerabilities).
-- **CI/CD Workflows (`.github/workflows/`):**
-  - **Lint and Format:** Automatically runs `ruff check` and `ruff format` on PRs and pushes.
-  - **Security Scan:** Runs `bandit` and `pip-audit` on PRs, pushes, and on a weekly schedule.
-  - **Deployment / Unit Tests:** Basic pipeline to run tests and deploy infrastructure (commented/adjustable based on environment).
-- **Standardized Ignored Paths:** `.gitignore` includes setups for local `data/` directories and `mlruns/` to prevent committing artifacts.
+The repository is structured into reusable Terraform `modules` and deployable `components`.
 
-## Post-Clone Checklist
+*   `modules/discovery-engine`: Provisions a `google_discovery_engine_chat_engine`.
+*   `modules/reasoning-engines`: Provisions multiple `google_vertex_ai_reasoning_engine` resources and writes their IDs to a GCS blob for consumption by downstream CI/CD.
+*   `component/gemini`: A deployable unit that combines the `discovery-engine` and `reasoning-engines` modules to provision a complete agent environment.
+*   `component/monitoring`: Provisions BigQuery tables for tracking deployment and evaluation events.
 
-Once you have generated a new repository from this template, immediately complete the following steps to customize it for your specific project:
+### CI/CD
 
-1.  **Update `pyproject.toml`:**
-    *   Change the `name` field from `"ml-template"` to your new project's name (e.g., `"customer-churn-model"`).
-    *   Update the `description`.
-    *   Reset the `version` to `"0.1.0"` or your preferred starting version.
-    *   Add or remove packages in the `dependencies` list as needed for your specific workload (e.g., `uv add boto3 polars`).
-2.  **Update `README.md`:** Replace the contents of this file with documentation specific to your new project.
-3.  **Configure CI/CD Workflows (`.github/workflows/cicd.yaml`):**
-    *   Update environment variables like `AWS_REGION` if necessary.
-    *   Uncomment the deployment jobs and update the AWS OIDC roles and account IDs (`<ACCOUNT_ID>`, `<DISCOVERY_ROLE_NAME>`, etc.) when your infrastructure is ready to be deployed.
-    *   Uncomment the `run_tests` job dependency once you have added actual test files to the `tests/` directory.
-    *   Set up environment variables in github correspondingly
-4. **Configure `.pre-commit-config.yaml`**: This template includes both mandatory and optional pre-commit hooks to enforce code quality and security.
-    *   **Mandatory Hooks (Enabled by default):**
-        *   **Standard File Fixers:** Trims trailing whitespace, fixes EOF, checks YAML/TOML/JSON syntax, prevents committing large files or merge conflicts, and catches debug statements.
-        *   **Python Quality (Local via `uv`):** Runs `ruff` (linting & formatting) and `ty` (type checking) instantly using your local virtual environment.
-        *   **Security (Local via `uv`):** Runs `bandit` for Python Static Application Security Testing (SAST).
-        *   **Documentation (Local via `uv`):** Uses `ruff` (enabled via the `D` rules in `pyproject.toml`) to enforce docstring presence and style.
-        *   **Secret Scanning:** Uses `gitleaks` (managed automatically by pre-commit) to detect hardcoded secrets, API keys, and passwords.
-    *   **Optional Hooks (Commented out at the bottom of the file):**
-        *   **Jupyter Notebooks:** `nbstripout` automatically clears notebook execution outputs before committing.
-        *   **Terraform:** Hooks to lint, format, and validate Infrastructure as Code.
-        *   **GitHub Actions:** `actionlint` to validate `.github/workflows` syntax.
-    *   **Action:** Review `.pre-commit-config.yaml` and uncomment any optional hooks that your project requires.
+The CI/CD process is managed by GitHub Actions and is designed around a promotion pipeline:
+
+`PR open` -> `Ephemeral Environment Apply` -> `PR close` -> `Ephemeral Environment Destroy`
+
+`Merge to main` -> `dev` -> `staging` (approval gate) -> `production` (approval gate)
+
+Deployment and evaluation history is logged to BigQuery tables provisioned by the `monitoring` component.
+
+## Prerequisites
+
+Before you can deploy resources using this repository, you will need:
+
+1.  **GCP Project(s)**: Separate projects for `dev`, `staging`, and `production` environments are recommended.
+2.  **GCS Bucket for Terraform State**: A GCS bucket to store Terraform state files.
+3.  **GCS Bucket for Outputs**: A GCS bucket to store the JSON outputs blob. This can be the same as the state bucket.
+4.  **Workload Identity Federation**: Configured in each GCP project to allow GitHub Actions to authenticate with Google Cloud without service account keys.
+5.  **GitHub Environments**: `dev`, `staging`, and `production` environments configured in GitHub with appropriate protection rules and approvers.
 
 ## Usage
 
-1. **Install Dependencies:**
-   ```bash
-   uv sync
-   ```
-2. **Setup Pre-commit:**
-   ```bash
-   pre-commit install
-   ```
-3. **Develop:**
-   - Format code: `uv run ruff format .`
-   - Lint code: `uv run ruff check .`
-   - Type check: `uv run ty check .`
-   - Run tests: `uv run pytest`
-   - Security scan: `uv run bandit -r src/ -ll -ii` and `uv run pip-audit`
-4. **Configure CI/CD:**
-   - Uncomment unit test run in `.github/workflows/unit_test.yaml` when tests are ready.
-   - Uncomment and update the deployment jobs in `.github/workflows/cicd.yaml` when your infrastructure (e.g., AWS OIDC) and tests are ready.
-   - Note: The `run_tests` job in `cicd.yaml` might be temporarily commented out if there are no test files initially. Uncomment it once tests are added.
+### Components
 
-## Note on Repository Settings
-Repository settings like branch protection and collaborators do not currently carry over when cloning as a template. (See related Gitea issue: [gitea#14303](https://github.com/go-gitea/gitea/issues/14303)).
+#### `gemini`
+
+This component deploys a Discovery Engine app and a set of Reasoning Engine shells. Configuration is managed via `.tfvars` files for each environment.
+
+Example `staging.tfvars`:
+```terraform
+gemini_app = {
+  engine_id      = "my-gemini-app-staging"
+  display_name   = "My Gemini App (Staging)"
+  data_store_ids = ["my-data-store_12345"]
+}
+
+reasoning_engines = {
+  "customer-service-agent" = {
+    display_name = "Customer Service Agent"
+  },
+  "internal-helpdesk-agent" = {
+    display_name = "Internal Helpdesk Agent"
+  }
+}
+```
+
+#### `monitoring`
+
+This component deploys the BigQuery dataset and tables required for CI/CD logging. It should be deployed once to a central monitoring or staging project.
+
+### Deployment
+
+Deployments are handled automatically by the GitHub Actions workflows on pull requests and merges to the `main` branch.

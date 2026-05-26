@@ -1,0 +1,242 @@
+name: Preprod Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'component/**'
+      - 'variables/**'
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Component to deploy (leave empty for auto-detect)"
+        required: true 
+        type: choice
+        options:
+          - gemini-enterprise-core
+          - monitoring
+      location:
+        required: false
+        type: choice
+        options:
+          - us
+          - au
+        default: "us"
+        description: "Location used for terraform plan (used to infer global tfenv file, e.g. 'au' for components requiring data sovereignty)"
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      components: ${{ steps.resolve.outputs.components }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed components
+        id: resolve
+        run: |
+          if [[ -n "${{ inputs.component }}" ]]; then
+            echo "components=[\"${{ inputs.component }}\"]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            if [[ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]]; then
+              # New tag or branch
+              CHANGED_FILES=$(git diff --name-only "${{ github.sha }}"~1 "${{ github.sha }}")
+            else
+              CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}")
+            fi
+          else
+            # For workflow_dispatch, compare with the main branch
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+          fi
+
+          # Extract component names from component/{name}/ paths
+          COMPONENT_NAMES=$(echo "${CHANGED_FILES}" | grep -oP '^component/\K[^/]+' | sort -u)
+
+          # variables/ changes affect all components
+          if echo "${CHANGED_FILES}" | grep -qE '^variables/'; then
+            COMPONENT_NAMES=$(find component -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)
+          fi
+
+          # Module changes are versioned via git tags - they don't trigger component deploys.
+          # Bump the module source ref in the component to pick up module changes.
+
+          if [[ -z "${COMPONENT_NAMES}" ]]; then
+            echo "components=[]" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(echo "${COMPONENT_NAMES}" | jq -R . | jq -s -c .)
+            echo "components=${JSON}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # --- Discovery ---
+  discovery-plan:
+    needs: [detect]
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: discovery
+      location: us
+      qualifier: ${{ vars.DS_PP_QUALIFIER }}
+      project_id: ${{ vars.DS_PP_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  discovery-apply:
+    needs: [detect, discovery-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    with:
+      component: ${{ matrix.component }}
+      environment: discovery
+      github_environment: discovery
+      tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.discovery-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  # --- Preprod US ---
+  preprod-us-plan:
+    needs: [detect, discovery-apply]
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod-us
+      location: us
+      qualifier: ${{ vars.US_PP_QUALIFIER }}
+      project_id: ${{ vars.US_PP_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  preprod-us-apply:
+    needs: [detect, preprod-us-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod-us
+      github_environment: preprod-us
+      tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.preprod-us-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  preprod-us-eval:
+    needs: [preprod-us-apply]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run preprod evaluation
+        run: |
+          echo "Running preprod evaluation"
+          # agents-cli eval --environment preprod
+
+      - name: Log Deployment Succeeded
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment preprod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment preprod --commit_sha ${{ github.sha }} --failure_reason "Preprod eval failed"
+
+  # --- Preprod AU ---
+  preprod-au-plan:
+    needs: [detect, discovery-apply]
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    uses: ./.github/workflows/terraform-plan.yml
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod-au
+      location: au
+      qualifier: ${{ vars.AU_PP_QUALIFIER }}
+      project_id: ${{ vars.AU_PP_PROJECT_ID }}
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PP_PROJECT_ID }}-ause1-${{ vars.AU_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+    secrets: inherit
+
+  preprod-au-apply:
+    needs: [detect, preprod-au-plan]
+    uses: ./.github/workflows/terraform-apply.yml
+    strategy:
+      matrix:
+        component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
+    with:
+      component: ${{ matrix.component }}
+      environment: preprod-au
+      github_environment: preprod-au
+      tf_state_bucket: cicd-tfstate-${{ vars.AU_PP_PROJECT_ID }}-ause1-${{ vars.AU_PP_QUALIFIER }}
+      gha_service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+      plan_gcs_path: ${{ needs.preprod-au-plan.outputs.plan_gcs_path }}
+    secrets: inherit
+
+  preprod-au-eval:
+    needs: [preprod-au-apply]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Run preprod evaluation
+        run: |
+          echo "Running preprod evaluation"
+          # agents-cli eval --environment preprod
+
+      - name: Log Deployment Succeeded
+        run: |
+          echo "Logging succeeded to BigQuery"
+          # bq-log-deployment.py log-event --status succeeded --component gemini --environment preprod --commit_sha ${{ github.sha }}
+
+      - name: Log Deployment Failed
+        if: failure()
+        run: |
+          echo "Logging failed eval to BigQuery"
+          # bq-log-deployment.py log-event --status failed --component gemini --environment preprod --commit_sha ${{ github.sha }} --failure_reason "Preprod eval failed"

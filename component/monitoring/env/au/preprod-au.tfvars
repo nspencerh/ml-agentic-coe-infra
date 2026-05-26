@@ -1,0 +1,1 @@
+location = "australia-southeast2"
