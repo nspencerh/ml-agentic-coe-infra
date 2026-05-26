@@ -22,6 +22,11 @@ jobs:
     outputs:
       components: ${{ steps.resolve.outputs.components }}
     steps:
+      - name: Debug environment
+        run: |
+          git config --global --list
+          env | sort | grep -i github
+
       - name: Checkout
         uses: actions/checkout@v4.2.2
         with:
