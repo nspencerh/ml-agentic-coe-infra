@@ -9,4 +9,3 @@
 #   registry_component   = "gemini-enterprise-core"
 #   registry_environment = var.environment
 # }
-#
