@@ -211,7 +211,7 @@ jobs:
   #       run: echo "plans=${{ toJSON(needs.preprod-au-plan) }}" >> $GITHUB_OUTPUT
 
   preprod-au-apply:
-    needs: [detect, preprod-au-plan-outputs]
+    needs: [detect, preprod-au-plan]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
