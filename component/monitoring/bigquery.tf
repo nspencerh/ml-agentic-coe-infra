@@ -1,5 +1,5 @@
 locals {
-  deploy_discovery = var.environment == "discovery"
+  deploy_discovery = var.environment == "discovery" || can(regex("^pr-[0-9]+$", var.environment))
   deploy_au        = contains(["preprod-au", "prod-au"], var.environment)
   deploy_us        = contains(["preprod-us", "prod-us"], var.environment)
 }
