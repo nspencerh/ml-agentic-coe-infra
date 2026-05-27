@@ -110,7 +110,9 @@ jobs:
       tf_state_bucket: cicd-tfstate-${{ vars.DS_PP_PROJECT_ID }}-ause1-${{ vars.DS_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.DS_PP_QUALIFIER }}@${{ vars.DS_PP_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.discovery-plan[matrix.component].outputs.plan_gcs_path }}
+      #TODO: fix this to use the correct plan output when multiple components are changed
+      plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
+      #plan_gcs_path: ${{ needs.plan[matrix.component].outputs.plan_gcs_path }}
     secrets: inherit
 
   # --- Preprod US ---
@@ -145,7 +147,9 @@ jobs:
       tf_state_bucket: cicd-tfstate-${{ vars.US_PP_PROJECT_ID }}-ause1-${{ vars.US_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PP_QUALIFIER }}@${{ vars.US_PP_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.preprod-us-plan[matrix.component].outputs.plan_gcs_path }}
+      #TODO: fix this to use the correct plan output when multiple components are changed
+      plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
+      #plan_gcs_path: ${{ needs.plan[matrix.component].outputs.plan_gcs_path }}
     secrets: inherit
 
   preprod-us-eval:
@@ -196,8 +200,17 @@ jobs:
       backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
     secrets: inherit
 
+  preprod-au-plan-outputs:
+    runs-on: ubuntu-latest
+    needs: preprod-au-plan
+    outputs:
+      plans: ${{ steps.get-outputs.outputs.plans }}
+    steps:
+      - id: get-outputs
+        run: echo "plans=${{ toJSON(needs.preprod-au-plan) }}" >> $GITHUB_OUTPUT
+
   preprod-au-apply:
-    needs: [detect, preprod-au-plan]
+    needs: [detect, preprod-au-plan-outputs]
     uses: ./.github/workflows/terraform-apply.yml
     strategy:
       matrix:
@@ -209,7 +222,9 @@ jobs:
       tf_state_bucket: cicd-tfstate-${{ vars.AU_PP_PROJECT_ID }}-ause1-${{ vars.AU_PP_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.AU_PP_QUALIFIER }}@${{ vars.AU_PP_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.preprod-au-plan[matrix.component].outputs.plan_gcs_path }}
+      #TODO: fix this to use the correct plan output when multiple components are changed
+      plan_gcs_path: ${{ needs.plan.outputs.plan_gcs_path }}
+      #plan_gcs_path: ${{ needs.plan[matrix.component].outputs.plan_gcs_path }}
     secrets: inherit
 
   preprod-au-eval:
