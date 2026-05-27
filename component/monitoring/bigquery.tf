@@ -4,7 +4,6 @@ locals {
   deploy_us        = contains(["preprod-us", "prod-us"], var.environment)
 }
 
-
 resource "google_bigquery_dataset" "us_deployments" {
   count      = (local.deploy_discovery || local.deploy_us) ? 1 : 0
   dataset_id = var.ephemeral_suffix != null ? "us_agent_platform_deployments_${var.ephemeral_suffix}" : "agent_platform_deployments"
