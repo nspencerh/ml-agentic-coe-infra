@@ -70,9 +70,11 @@ jobs:
       - name: Download plan from GCS
         working-directory: component/${{ inputs.component }}
         run: |
-          gcloud storage cp "gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}" tfplan \
+          gcloud storage cp "gs://${{ inputs.tf_state_bucket }}/plans/${{ inputs.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan" tfplan \
             --impersonate-service-account=${{ inputs.backend_service_account }}
-          echo "Plan downloaded from gs://${{ inputs.tf_state_bucket }}/${{ inputs.plan_gcs_path }}"
+          echo "Plan downloaded from gs://${{ inputs.tf_state_bucket }}/plans/${{ inputs.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
+
+PLAN_PATH=""
 
       - name: Log Deployment Commenced
         run: |
