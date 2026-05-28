@@ -1,10 +1,4 @@
-locals {
-  deploy_discovery = var.environment == "discovery" || can(regex("^pr-[0-9]+$", var.environment))
-  deploy_au        = contains(["preprod-au", "prod-au"], var.environment)
-  deploy_us        = contains(["preprod-us", "prod-us"], var.environment)
-}
-
-resource "google_bigquery_dataset" "us_deployments" {
+resource "google_bigquery_dataset" "us_deployment" {
   count      = (local.deploy_discovery || local.deploy_us) ? 1 : 0
   dataset_id = var.ephemeral_suffix != null ? "us_agent_platform_deployments_${var.ephemeral_suffix}" : "us_agent_platform_deployments"
   location   = var.region
@@ -17,7 +11,7 @@ resource "google_bigquery_dataset" "us_deployments" {
   }
 }
 
-resource "google_bigquery_dataset" "au_deployments" {
+resource "google_bigquery_dataset" "au_deployment" {
   count      = (local.deploy_discovery || local.deploy_au) ? 1 : 0
   dataset_id = var.ephemeral_suffix != null ? "au_agent_platform_deployments_${var.ephemeral_suffix}" : "au_agent_platform_deployments"
   location   = var.region
