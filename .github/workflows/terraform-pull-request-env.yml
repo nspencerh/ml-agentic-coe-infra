@@ -2,7 +2,7 @@ name: Ephemeral Environment
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main-cicd-develop]
     types: [opened, synchronize, closed]
     paths:
       - 'component/**'

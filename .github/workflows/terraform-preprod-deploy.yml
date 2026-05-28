@@ -2,7 +2,7 @@ name: Preprod Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main-cicd-develop]
     paths:
       - 'component/**'
       - 'variables/**'
@@ -57,7 +57,7 @@ jobs:
             fi
           else
             # For workflow_dispatch, compare with the main branch
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+            CHANGED_FILES=$(git diff --name-only origin/main-cicd-develop...HEAD)
           fi
 
           # Extract component names from component/{name}/ paths
@@ -81,7 +81,7 @@ jobs:
   # --- Discovery ---
   discovery-plan:
     needs: [detect]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -118,7 +118,7 @@ jobs:
   # --- Preprod US ---
   preprod-us-plan:
     needs: [detect, discovery-apply]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
@@ -184,7 +184,7 @@ jobs:
   # --- Preprod AU ---
   preprod-au-plan:
     needs: [detect, discovery-apply]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main-cicd-develop'
     strategy:
       matrix:
         component: ${{ fromJSON(needs.detect.outputs.components || '[]') }}
