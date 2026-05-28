@@ -1,6 +1,6 @@
 # module "discovery_engine" {
 #   source = "../../modules/discovery-engine"
-
+#
 #   project_id            = var.project_id
 #   engine_id             = var.ephemeral_suffix != null ? "${var.gemini_app.engine_id}-${var.ephemeral_suffix}" : var.gemini_app.engine_id
 #   display_name          = var.ephemeral_suffix != null ? "${var.gemini_app.display_name} (${var.ephemeral_suffix})" : var.gemini_app.display_name
