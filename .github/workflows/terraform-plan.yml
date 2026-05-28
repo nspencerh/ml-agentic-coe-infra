@@ -39,10 +39,6 @@ on:
         required: true
         type: string
         description: "Service account to use for Terraform backend operations"
-    outputs:
-      plan_gcs_path:
-        description: "GCS path where the plan binary was uploaded"
-        value: ${{ jobs.plan.outputs.plan_gcs_path }}
 
 permissions:
   contents: read
@@ -55,8 +51,6 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    outputs:
-      plan_gcs_path: ${{ steps.upload.outputs.gcs_path }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -99,5 +93,4 @@ jobs:
           PLAN_PATH="plans/${{ inputs.component }}/${{ github.run_id }}-${{ github.run_attempt }}.tfplan"
           gcloud storage cp tfplan "gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}" \
             --impersonate-service-account=${{ inputs.backend_service_account }}
-          echo "gcs_path=${PLAN_PATH}" >> "$GITHUB_OUTPUT"
           echo "Plan uploaded to gs://${{ inputs.tf_state_bucket }}/${PLAN_PATH}"

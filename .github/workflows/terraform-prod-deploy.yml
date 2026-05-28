@@ -108,7 +108,6 @@ jobs:
       tf_state_bucket: cicd-tfstate-${{ vars.US_PR_PROJECT_ID }}-ause1-${{ vars.US_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.US_PR_QUALIFIER }}@${{ vars.US_PR_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.prod-us-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
   post-prod-us-eval:
@@ -203,7 +202,6 @@ jobs:
       tf_state_bucket: cicd-tfstate-${{ vars.AU_PR_PROJECT_ID }}-ause1-${{ vars.AU_PR_QUALIFIER }}
       gha_service_account: cicd-gha-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
       backend_service_account: cicd-backend-${{ vars.AU_PR_QUALIFIER }}@${{ vars.AU_PR_PROJECT_ID }}.iam.gserviceaccount.com
-      plan_gcs_path: ${{ needs.prod-au-plan.outputs.plan_gcs_path }}
     secrets: inherit
 
   post-prod-au-eval:
